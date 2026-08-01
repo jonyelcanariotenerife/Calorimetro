@@ -154,8 +154,10 @@ const FOOD_DB = [
     { nombre: 'Avena', alias: ['avena', 'copos de avena'], cal: 389, prot: 16.9, carb: 66, gras: 6.9, unidad: 40 },
     { nombre: 'Cereales de desayuno', alias: ['cereales de desayuno', 'cereales'], cal: 378, prot: 7, carb: 84, gras: 1.5, unidad: 40 },
     { nombre: 'Quinoa cocida', alias: ['quinoa', 'quinoa cocida'], cal: 120, prot: 4.4, carb: 21.3, gras: 1.9, unidad: 150 },
-    { nombre: 'Patata cocida', alias: ['patata cocida', 'patata hervida', 'papa cocida'], cal: 87, prot: 1.9, carb: 20, gras: 0.1, unidad: 150 },
+    { nombre: 'Patata cocida', alias: ['patata cocida', 'patata hervida', 'papa cocida', 'papa hervida', 'papas cocidas', 'papas hervidas'], cal: 87, prot: 1.9, carb: 20, gras: 0.1, unidad: 150 },
     { nombre: 'Patatas fritas', alias: ['patatas fritas', 'papas fritas'], cal: 312, prot: 3.4, carb: 41, gras: 15, unidad: 150 },
+    { nombre: 'Patata asada', alias: ['patata asada', 'papa asada', 'papas asadas', 'patatas asadas'], cal: 93, prot: 2.1, carb: 21, gras: 0.1, unidad: 150 },
+    { nombre: 'Puré de patatas', alias: ['pure de patatas', 'pure de papas', 'puré de patatas', 'puré de papas'], cal: 113, prot: 2, carb: 16, gras: 4.2, unidad: 150 },
     // Verduras
     { nombre: 'Tomate', alias: ['tomate'], cal: 18, prot: 0.9, carb: 3.9, gras: 0.2, unidad: 120 },
     { nombre: 'Lechuga', alias: ['lechuga'], cal: 15, prot: 1.4, carb: 2.9, gras: 0.2, unidad: 50 },
@@ -272,6 +274,50 @@ const calcularMacrosPorPeso = (item, gramos) => {
     };
 };
 
+// ============================================================
+//  ALIMENTOS AMBIGUOS — si solo dices el nombre genérico
+//  ("papas", "huevo", "pollo"...) sin decir cómo lo cocinaste,
+//  se pregunta antes de calcular, en vez de adivinar.
+// ============================================================
+const FOOD_FAMILIES = [
+    {
+        trigger: ['papa', 'papas', 'patata', 'patatas'],
+        pregunta: '¿Cómo has cocinado la papa?',
+        opciones: [
+            { label: 'Cocida / hervida', dbNombre: 'Patata cocida' },
+            { label: 'Frita', dbNombre: 'Patatas fritas' },
+            { label: 'Asada', dbNombre: 'Patata asada' },
+            { label: 'Puré', dbNombre: 'Puré de patatas' },
+        ]
+    },
+    {
+        trigger: ['huevo', 'huevos'],
+        pregunta: '¿Cómo has cocinado el huevo?',
+        opciones: [
+            { label: 'Frito', dbNombre: 'Huevo frito' },
+            { label: 'Cocido / duro', dbNombre: 'Huevo cocido' },
+            { label: 'Revuelto', dbNombre: 'Huevo revuelto' },
+            { label: 'Tortilla francesa', dbNombre: 'Tortilla francesa' },
+        ]
+    },
+    {
+        trigger: ['pollo'],
+        pregunta: '¿Qué parte y cómo el pollo?',
+        opciones: [
+            { label: 'Pechuga a la plancha', dbNombre: 'Pechuga de pollo' },
+            { label: 'Muslo', dbNombre: 'Muslo de pollo' },
+            { label: 'Con piel / asado', dbNombre: 'Pollo con piel' },
+        ]
+    }
+];
+
+// Busca si el texto contiene la palabra genérica de alguna familia ambigua
+const buscarFamiliaAmbigua = (textoOriginal) => {
+    const texto = normalizarTexto(textoOriginal);
+    const palabras = texto.split(/\s+/);
+    return FOOD_FAMILIES.find(fam => fam.trigger.some(t => palabras.includes(normalizarTexto(t)))) || null;
+};
+
 const loadEntries = () => {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -354,31 +400,85 @@ const App = () => {
     //  (sin API externa: todo se calcula en el propio dispositivo)
     // ============================================================
     const lastMatchRef = useRef(null); // guarda el alimento de la BD encontrado, para poder recalcular si cambia el peso
+    const [foodChoice, setFoodChoice] = useState(null); // { familia, textoOriginal, gramosManual, origen } cuando hay que preguntar cómo se cocinó
 
-    const analyzeLocal = (userText, gramosManual) => {
-        const item = buscarAlimento(userText);
-        if (!item) {
-            lastMatchRef.current = null;
-            setToast('🤔 No está en la base de datos, introduce los valores a mano');
-            return null;
+    // Aplica un resultado ya calculado al formulario, según de dónde vino la petición
+    const aplicarResultado = (resultado, origen) => {
+        if (origen === 'voice') {
+            setFormData({
+                alimento: resultado.alimento, calorias: resultado.calorias, proteinas: resultado.proteinas,
+                carbohidratos: resultado.carbohidratos, grasas: resultado.grasas, peso: String(resultado.gramos), fecha: todayStr()
+            });
+            setEditingId(null);
+            setModalOpen(true);
+        } else {
+            setFormData(prev => ({
+                ...prev, alimento: resultado.alimento, calorias: resultado.calorias, proteinas: resultado.proteinas,
+                carbohidratos: resultado.carbohidratos, grasas: resultado.grasas, peso: String(resultado.gramos)
+            }));
         }
+        setToast(`✅ "${resultado.alimento}" · ${resultado.gramos} g`);
+    };
+
+    const analyzeLocal = (userText, gramosManual, origen) => {
+        // 1) Coincidencia directa y específica (ej. "patata cocida", "pechuga de pollo")
+        const itemDirecto = buscarAlimento(userText);
+        if (itemDirecto) {
+            lastMatchRef.current = itemDirecto;
+            let gramos, avisoDefecto = false;
+            if (gramosManual && Number(gramosManual) > 0) {
+                gramos = Number(gramosManual);
+            } else {
+                const extraido = extraerGramos(userText, itemDirecto);
+                gramos = extraido.gramos;
+                avisoDefecto = !extraido.detectado;
+            }
+            const resultado = calcularMacrosPorPeso(itemDirecto, gramos);
+            aplicarResultado(resultado, origen);
+            if (avisoDefecto) setToast(`📦 "${itemDirecto.nombre}" · usando ${resultado.gramos} g por defecto, ajusta el peso si quieres`);
+            return;
+        }
+        // 2) Nombre genérico y ambiguo (ej. "papas", "huevo", "pollo") → preguntar cómo se cocinó
+        const familia = buscarFamiliaAmbigua(userText);
+        if (familia) {
+            lastMatchRef.current = null;
+            setFoodChoice({ familia, textoOriginal: userText, gramosManual: gramosManual || null, origen });
+            return;
+        }
+        // 3) No está en la base de datos
+        lastMatchRef.current = null;
+        setToast('🤔 No está en la base de datos, introduce los valores a mano');
+        if (origen === 'voice') {
+            setFormData({ ...EMPTY_FORM, alimento: userText, fecha: todayStr() });
+            setEditingId(null);
+            setModalOpen(true);
+        }
+    };
+
+    // Se llama al pulsar una de las opciones de preparación en el modal de "¿cómo lo cocinaste?"
+    const resolverFamilia = (opcion) => {
+        const item = FOOD_DB.find(i => i.nombre === opcion.dbNombre);
+        if (!item || !foodChoice) return;
         lastMatchRef.current = item;
         let gramos;
-        let avisoDefecto = false;
-        if (gramosManual && Number(gramosManual) > 0) {
-            gramos = Number(gramosManual);
+        if (foodChoice.gramosManual && Number(foodChoice.gramosManual) > 0) {
+            gramos = Number(foodChoice.gramosManual);
         } else {
-            const extraido = extraerGramos(userText, item);
-            gramos = extraido.gramos;
-            avisoDefecto = !extraido.detectado;
+            gramos = extraerGramos(foodChoice.textoOriginal, item).gramos;
         }
         const resultado = calcularMacrosPorPeso(item, gramos);
-        if (avisoDefecto) {
-            setToast(`📦 "${item.nombre}" · usando ${resultado.gramos} g por defecto, ajusta el peso si quieres`);
-        } else {
-            setToast(`✅ "${item.nombre}" · ${resultado.gramos} g`);
+        aplicarResultado(resultado, foodChoice.origen);
+        setFoodChoice(null);
+    };
+
+    // Cancela la pregunta de preparación; si venía de dictado por voz, abre el formulario para rellenar a mano
+    const cancelarFoodChoice = () => {
+        if (foodChoice && foodChoice.origen === 'voice') {
+            setFormData({ ...EMPTY_FORM, alimento: foodChoice.textoOriginal, fecha: todayStr() });
+            setEditingId(null);
+            setModalOpen(true);
         }
-        return resultado;
+        setFoodChoice(null);
     };
 
     // Recalcula macros cuando el usuario cambia manualmente el campo "Peso" del formulario
@@ -415,22 +515,7 @@ const App = () => {
         rec.onend = () => setIsListening(false);
         rec.onresult = (event) => {
             const text = event.results[0][0].transcript.trim();
-            const parsed = analyzeLocal(text);
-            if (parsed) {
-                setFormData({
-                    alimento: parsed.alimento || text,
-                    calorias: parsed.calorias,
-                    proteinas: parsed.proteinas,
-                    carbohidratos: parsed.carbohidratos,
-                    grasas: parsed.grasas,
-                    peso: String(parsed.gramos),
-                    fecha: todayStr()
-                });
-            } else {
-                setFormData({ ...EMPTY_FORM, alimento: text, fecha: todayStr() });
-            }
-            setEditingId(null);
-            setModalOpen(true);
+            analyzeLocal(text, null, 'voice');
         };
         try { rec.start(); } catch (e) { setToast('⚠️ Error al iniciar el micrófono'); }
     };
@@ -458,18 +543,7 @@ const App = () => {
 
     const analyzeConceptFromModal = () => {
         if (!formData.alimento) { setToast('⚠️ Escribe o dicta primero el alimento'); return; }
-        const parsed = analyzeLocal(formData.alimento, formData.peso);
-        if (parsed) {
-            setFormData(prev => ({
-                ...prev,
-                alimento: parsed.alimento || prev.alimento,
-                calorias: parsed.calorias,
-                proteinas: parsed.proteinas,
-                carbohidratos: parsed.carbohidratos,
-                grasas: parsed.grasas,
-                peso: String(parsed.gramos)
-            }));
-        }
+        analyzeLocal(formData.alimento, formData.peso, 'modal');
     };
 
     // ============================================================
@@ -695,6 +769,30 @@ const App = () => {
                 <i className="fa-solid fa-circle-question text-xl"></i>
             </button>
 
+            {/* MODAL "¿CÓMO LO COCINASTE?" — alimentos ambiguos */}
+            {foodChoice && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-black text-white">{foodChoice.familia.pregunta}</h3>
+                            <button onClick={cancelarFoodChoice} className="text-slate-400 hover:text-white p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <p className="text-[12px] text-slate-400 mb-4">Elige cómo lo preparaste para calcular bien las calorías.</p>
+                        <div className="space-y-2">
+                            {foodChoice.familia.opciones.map(op => (
+                                <button key={op.dbNombre} onClick={() => resolverFamilia(op)}
+                                    className="w-full text-left py-3.5 px-4 bg-white/5 hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-500/30 text-white rounded-xl font-bold text-sm transition-all active:scale-95">
+                                    {op.label}
+                                </button>
+                            ))}
+                        </div>
+                        <button onClick={cancelarFoodChoice} className="w-full mt-3 py-3 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-xs transition-all active:scale-95">
+                            No lo sé / rellenar a mano
+                        </button>
+                    </div>
+                </div>, document.body
+            )}
+
             {/* MODAL AÑADIR/EDITAR */}
             {modalOpen && ReactDOM.createPortal(
                 <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
@@ -779,10 +877,13 @@ const App = () => {
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
                     <div className="bg-[#0f111a] border border-white/10 p-8 rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade text-center relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
-                        <div className="w-20 h-20 mx-auto bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_30px_rgba(79,70,229,0.2)]">
-                            <i className="fa-solid fa-code text-3xl text-indigo-400"></i>
+                        <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 shadow-[0_0_35px_rgba(99,102,241,0.35)]" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 55%, #10b981 100%)' }}>
+                            <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2c-.6 2.4-2.2 3.7-3.5 5.2C7 9 6 10.7 6 13a6 6 0 0 0 12 0c0-2.6-1.4-4.4-2.6-6-.4.9-1 1.7-1.8 2.1.2-2.6-.6-4.8-1.6-7.1Z" fill="white"/>
+                                <path d="M12 20a4 4 0 0 1-4-4c0-1.4.7-2.3 1.5-3.2.2 1 .8 1.7 1.6 2 0-1.3.4-2.3 1-3.3.7 1.1 1.9 2 1.9 3.5a4 4 0 0 1-2 4Z" fill="#0f111a" opacity="0.55"/>
+                            </svg>
                         </div>
-                        <h3 className="text-xl font-black text-white mb-2">El Hilván</h3>
+                        <h3 className="text-xl font-black text-white mb-2">Calorímetro</h3>
                         <p className="text-sm text-slate-400 mb-6 leading-relaxed">
                             Software de conteo calórico desarrollado y diseñado exclusivamente por <br/>
                             <strong className="text-white">Jonathan Pérez Galán</strong>.<br/><br/>

@@ -88,10 +88,189 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 const STORAGE_KEY = 'calorimetro_entries';
 const THEME_KEY = 'calorimetro_theme';
-const API_KEY_STORAGE = 'calorimetro_api_key';
 const GUIDE_SHOWN_KEY = 'calorimetro_voice_guide_shown';
 
-const EMPTY_FORM = { alimento: '', calorias: '', proteinas: '', carbohidratos: '', grasas: '', fecha: new Date().toISOString().slice(0, 10) };
+const EMPTY_FORM = { alimento: '', calorias: '', proteinas: '', carbohidratos: '', grasas: '', peso: '100', fecha: new Date().toISOString().slice(0, 10) };
+
+// ============================================================
+//  BASE DE DATOS LOCAL DE ALIMENTOS (valores por 100 g)
+//  unidad: peso aprox. en g de "una unidad" (para frases como "dos huevos")
+// ============================================================
+const FOOD_DB = [
+    // Huevos y lácteos
+    { nombre: 'Huevo frito', alias: ['huevo frito', 'huevos fritos'], cal: 196, prot: 13.6, carb: 0.8, gras: 15.3, unidad: 60 },
+    { nombre: 'Huevo cocido', alias: ['huevo cocido', 'huevo duro', 'huevos cocidos', 'huevos duros'], cal: 155, prot: 12.6, carb: 1.1, gras: 10.6, unidad: 55 },
+    { nombre: 'Huevo revuelto', alias: ['huevo revuelto', 'huevos revueltos'], cal: 168, prot: 11.5, carb: 1.6, gras: 12.5, unidad: 60 },
+    { nombre: 'Tortilla francesa', alias: ['tortilla francesa'], cal: 154, prot: 10.8, carb: 0.8, gras: 11.7, unidad: 60 },
+    { nombre: 'Clara de huevo', alias: ['clara de huevo', 'claras de huevo'], cal: 52, prot: 10.9, carb: 0.7, gras: 0.2, unidad: 33 },
+    { nombre: 'Leche entera', alias: ['leche entera', 'vaso de leche', 'leche'], cal: 61, prot: 3.2, carb: 4.8, gras: 3.3, unidad: 240 },
+    { nombre: 'Leche desnatada', alias: ['leche desnatada', 'leche descremada'], cal: 35, prot: 3.4, carb: 5.0, gras: 0.1, unidad: 240 },
+    { nombre: 'Yogur natural', alias: ['yogur natural', 'yogurt natural'], cal: 61, prot: 3.5, carb: 4.7, gras: 3.3, unidad: 125 },
+    { nombre: 'Yogur griego', alias: ['yogur griego', 'yogurt griego'], cal: 97, prot: 9, carb: 3.6, gras: 5, unidad: 150 },
+    { nombre: 'Queso fresco', alias: ['queso fresco', 'queso batido'], cal: 98, prot: 11, carb: 3.4, gras: 4.3, unidad: 30 },
+    { nombre: 'Queso manchego', alias: ['queso manchego', 'queso curado'], cal: 400, prot: 26, carb: 1.3, gras: 33, unidad: 30 },
+    { nombre: 'Requesón', alias: ['requeson', 'requesón'], cal: 98, prot: 11, carb: 3.4, gras: 4.3, unidad: 60 },
+    { nombre: 'Mantequilla', alias: ['mantequilla'], cal: 717, prot: 0.9, carb: 0.1, gras: 81, unidad: 10 },
+    { nombre: 'Nata para cocinar', alias: ['nata', 'nata para cocinar'], cal: 300, prot: 2.2, carb: 3.1, gras: 30, unidad: 30 },
+    // Carnes
+    { nombre: 'Pechuga de pollo', alias: ['pechuga de pollo', 'pollo a la plancha', 'pechuga pollo'], cal: 165, prot: 31, carb: 0, gras: 3.6, unidad: 150 },
+    { nombre: 'Muslo de pollo', alias: ['muslo de pollo', 'contramuslo de pollo'], cal: 209, prot: 26, carb: 0, gras: 10.9, unidad: 120 },
+    { nombre: 'Pollo con piel', alias: ['pollo con piel', 'pollo asado'], cal: 239, prot: 27, carb: 0, gras: 14, unidad: 150 },
+    { nombre: 'Pavo', alias: ['pavo', 'pechuga de pavo'], cal: 135, prot: 29, carb: 0, gras: 1.7, unidad: 150 },
+    { nombre: 'Ternera', alias: ['ternera', 'filete de ternera', 'carne de ternera'], cal: 172, prot: 26, carb: 0, gras: 7, unidad: 150 },
+    { nombre: 'Solomillo de cerdo', alias: ['solomillo de cerdo', 'lomo de cerdo', 'cerdo'], cal: 143, prot: 26, carb: 0, gras: 4, unidad: 150 },
+    { nombre: 'Chuleta de cerdo', alias: ['chuleta de cerdo'], cal: 231, prot: 24, carb: 0, gras: 15, unidad: 150 },
+    { nombre: 'Cordero', alias: ['cordero', 'chuletas de cordero'], cal: 258, prot: 25, carb: 0, gras: 17, unidad: 150 },
+    { nombre: 'Hamburguesa de ternera', alias: ['hamburguesa de ternera', 'hamburguesa casera'], cal: 250, prot: 26, carb: 0, gras: 17, unidad: 120 },
+    // Embutidos
+    { nombre: 'Jamón serrano', alias: ['jamon serrano', 'jamón serrano'], cal: 241, prot: 31, carb: 0.4, gras: 13, unidad: 30 },
+    { nombre: 'Jamón cocido / york', alias: ['jamon cocido', 'jamon york', 'jamón cocido', 'jamón york'], cal: 113, prot: 18, carb: 1.5, gras: 4, unidad: 30 },
+    { nombre: 'Chorizo', alias: ['chorizo'], cal: 455, prot: 24, carb: 1.9, gras: 38, unidad: 30 },
+    { nombre: 'Salchichón', alias: ['salchichon', 'salchichón'], cal: 400, prot: 22, carb: 1, gras: 34, unidad: 30 },
+    { nombre: 'Bacon / panceta', alias: ['bacon', 'panceta', 'beicon'], cal: 541, prot: 37, carb: 1.4, gras: 42, unidad: 20 },
+    { nombre: 'Salchichas', alias: ['salchichas'], cal: 260, prot: 12, carb: 3, gras: 22, unidad: 50 },
+    // Pescados y mariscos
+    { nombre: 'Salmón', alias: ['salmon', 'salmón'], cal: 208, prot: 20, carb: 0, gras: 13, unidad: 150 },
+    { nombre: 'Atún natural', alias: ['atun', 'atún', 'atun natural'], cal: 132, prot: 28, carb: 0, gras: 1.3, unidad: 150 },
+    { nombre: 'Atún en lata', alias: ['atun en lata', 'atún en lata', 'lata de atun'], cal: 180, prot: 26, carb: 0, gras: 8, unidad: 80 },
+    { nombre: 'Merluza', alias: ['merluza'], cal: 86, prot: 17.8, carb: 0, gras: 1.3, unidad: 150 },
+    { nombre: 'Bacalao', alias: ['bacalao'], cal: 82, prot: 18, carb: 0, gras: 0.7, unidad: 150 },
+    { nombre: 'Gambas', alias: ['gambas', 'camarones', 'langostinos'], cal: 99, prot: 24, carb: 0.2, gras: 0.3, unidad: 100 },
+    { nombre: 'Mejillones', alias: ['mejillones'], cal: 86, prot: 12, carb: 3.7, gras: 2.2, unidad: 100 },
+    { nombre: 'Calamares', alias: ['calamares'], cal: 92, prot: 15.6, carb: 3.1, gras: 1.4, unidad: 100 },
+    { nombre: 'Sardinas', alias: ['sardinas'], cal: 208, prot: 25, carb: 0, gras: 11.5, unidad: 100 },
+    // Legumbres
+    { nombre: 'Lentejas cocidas', alias: ['lentejas', 'lentejas cocidas'], cal: 116, prot: 9, carb: 20, gras: 0.4, unidad: 200 },
+    { nombre: 'Garbanzos cocidos', alias: ['garbanzos', 'garbanzos cocidos'], cal: 164, prot: 8.9, carb: 27, gras: 2.6, unidad: 200 },
+    { nombre: 'Judías / alubias cocidas', alias: ['judias', 'alubias', 'judías', 'frijoles'], cal: 127, prot: 8.7, carb: 22.8, gras: 0.5, unidad: 200 },
+    { nombre: 'Guisantes', alias: ['guisantes'], cal: 81, prot: 5.4, carb: 14, gras: 0.4, unidad: 100 },
+    { nombre: 'Hummus', alias: ['hummus'], cal: 166, prot: 8, carb: 14, gras: 9.6, unidad: 50 },
+    { nombre: 'Tofu', alias: ['tofu'], cal: 76, prot: 8, carb: 1.9, gras: 4.8, unidad: 100 },
+    // Cereales, pan, pasta, arroz, patata
+    { nombre: 'Arroz blanco cocido', alias: ['arroz', 'arroz blanco', 'arroz cocido'], cal: 130, prot: 2.7, carb: 28, gras: 0.3, unidad: 150 },
+    { nombre: 'Pasta cocida', alias: ['pasta', 'espaguetis', 'macarrones', 'pasta cocida'], cal: 131, prot: 5, carb: 25, gras: 1.1, unidad: 150 },
+    { nombre: 'Pan blanco', alias: ['pan blanco', 'pan', 'rebanada de pan'], cal: 265, prot: 9, carb: 49, gras: 3.2, unidad: 30 },
+    { nombre: 'Pan integral', alias: ['pan integral'], cal: 247, prot: 13, carb: 41, gras: 3.4, unidad: 30 },
+    { nombre: 'Avena', alias: ['avena', 'copos de avena'], cal: 389, prot: 16.9, carb: 66, gras: 6.9, unidad: 40 },
+    { nombre: 'Cereales de desayuno', alias: ['cereales de desayuno', 'cereales'], cal: 378, prot: 7, carb: 84, gras: 1.5, unidad: 40 },
+    { nombre: 'Quinoa cocida', alias: ['quinoa', 'quinoa cocida'], cal: 120, prot: 4.4, carb: 21.3, gras: 1.9, unidad: 150 },
+    { nombre: 'Patata cocida', alias: ['patata cocida', 'patata hervida', 'papa cocida'], cal: 87, prot: 1.9, carb: 20, gras: 0.1, unidad: 150 },
+    { nombre: 'Patatas fritas', alias: ['patatas fritas', 'papas fritas'], cal: 312, prot: 3.4, carb: 41, gras: 15, unidad: 150 },
+    // Verduras
+    { nombre: 'Tomate', alias: ['tomate'], cal: 18, prot: 0.9, carb: 3.9, gras: 0.2, unidad: 120 },
+    { nombre: 'Lechuga', alias: ['lechuga'], cal: 15, prot: 1.4, carb: 2.9, gras: 0.2, unidad: 50 },
+    { nombre: 'Zanahoria', alias: ['zanahoria'], cal: 41, prot: 0.9, carb: 10, gras: 0.2, unidad: 80 },
+    { nombre: 'Pepino', alias: ['pepino'], cal: 15, prot: 0.7, carb: 3.6, gras: 0.1, unidad: 120 },
+    { nombre: 'Cebolla', alias: ['cebolla'], cal: 40, prot: 1.1, carb: 9.3, gras: 0.1, unidad: 100 },
+    { nombre: 'Pimiento', alias: ['pimiento'], cal: 31, prot: 1, carb: 6, gras: 0.3, unidad: 100 },
+    { nombre: 'Brócoli', alias: ['brocoli', 'brócoli'], cal: 34, prot: 2.8, carb: 6.6, gras: 0.4, unidad: 100 },
+    { nombre: 'Espinacas', alias: ['espinacas'], cal: 23, prot: 2.9, carb: 3.6, gras: 0.4, unidad: 100 },
+    { nombre: 'Calabacín', alias: ['calabacin', 'calabacín'], cal: 17, prot: 1.2, carb: 3.1, gras: 0.3, unidad: 150 },
+    { nombre: 'Champiñones', alias: ['champiñones', 'setas'], cal: 22, prot: 3.1, carb: 3.3, gras: 0.3, unidad: 80 },
+    { nombre: 'Aguacate', alias: ['aguacate', 'palta'], cal: 160, prot: 2, carb: 8.5, gras: 14.7, unidad: 150 },
+    // Frutas
+    { nombre: 'Manzana', alias: ['manzana'], cal: 52, prot: 0.3, carb: 14, gras: 0.2, unidad: 150 },
+    { nombre: 'Plátano', alias: ['platano', 'plátano', 'banana'], cal: 89, prot: 1.1, carb: 23, gras: 0.3, unidad: 120 },
+    { nombre: 'Naranja', alias: ['naranja'], cal: 47, prot: 0.9, carb: 12, gras: 0.1, unidad: 150 },
+    { nombre: 'Pera', alias: ['pera'], cal: 57, prot: 0.4, carb: 15, gras: 0.1, unidad: 150 },
+    { nombre: 'Fresas', alias: ['fresas', 'fresa'], cal: 32, prot: 0.7, carb: 7.7, gras: 0.3, unidad: 100 },
+    { nombre: 'Uvas', alias: ['uvas'], cal: 69, prot: 0.7, carb: 18, gras: 0.2, unidad: 100 },
+    { nombre: 'Sandía', alias: ['sandia', 'sandía'], cal: 30, prot: 0.6, carb: 7.6, gras: 0.2, unidad: 200 },
+    { nombre: 'Melón', alias: ['melon', 'melón'], cal: 34, prot: 0.8, carb: 8.2, gras: 0.2, unidad: 200 },
+    { nombre: 'Piña', alias: ['piña', 'pina'], cal: 50, prot: 0.5, carb: 13, gras: 0.1, unidad: 150 },
+    { nombre: 'Kiwi', alias: ['kiwi'], cal: 61, prot: 1.1, carb: 15, gras: 0.5, unidad: 75 },
+    { nombre: 'Mango', alias: ['mango'], cal: 60, prot: 0.8, carb: 15, gras: 0.4, unidad: 150 },
+    // Frutos secos y snacks
+    { nombre: 'Almendras', alias: ['almendras'], cal: 579, prot: 21, carb: 22, gras: 50, unidad: 30 },
+    { nombre: 'Nueces', alias: ['nueces'], cal: 654, prot: 15, carb: 14, gras: 65, unidad: 30 },
+    { nombre: 'Cacahuetes', alias: ['cacahuetes', 'mani', 'maní'], cal: 567, prot: 25.8, carb: 16, gras: 49, unidad: 30 },
+    { nombre: 'Pistachos', alias: ['pistachos'], cal: 560, prot: 20, carb: 28, gras: 45, unidad: 30 },
+    { nombre: 'Palomitas', alias: ['palomitas'], cal: 387, prot: 12.9, carb: 78, gras: 4.5, unidad: 30 },
+    // Dulces y bebidas
+    { nombre: 'Chocolate con leche', alias: ['chocolate', 'chocolate con leche'], cal: 535, prot: 7.6, carb: 59, gras: 30, unidad: 25 },
+    { nombre: 'Galletas', alias: ['galletas'], cal: 480, prot: 6, carb: 65, gras: 21, unidad: 25 },
+    { nombre: 'Helado', alias: ['helado'], cal: 207, prot: 3.5, carb: 24, gras: 11, unidad: 100 },
+    { nombre: 'Azúcar', alias: ['azucar', 'azúcar'], cal: 387, prot: 0, carb: 100, gras: 0, unidad: 10 },
+    { nombre: 'Miel', alias: ['miel'], cal: 304, prot: 0.3, carb: 82, gras: 0, unidad: 20 },
+    { nombre: 'Mermelada', alias: ['mermelada'], cal: 250, prot: 0.4, carb: 62, gras: 0.1, unidad: 20 },
+    { nombre: 'Refresco de cola', alias: ['refresco de cola', 'coca cola', 'cola'], cal: 42, prot: 0, carb: 10.6, gras: 0, unidad: 330 },
+    { nombre: 'Cerveza', alias: ['cerveza'], cal: 43, prot: 0.5, carb: 3.6, gras: 0, unidad: 330 },
+    { nombre: 'Vino tinto', alias: ['vino tinto', 'vino'], cal: 85, prot: 0.1, carb: 2.6, gras: 0, unidad: 150 },
+    { nombre: 'Zumo de naranja', alias: ['zumo de naranja', 'jugo de naranja'], cal: 45, prot: 0.7, carb: 10.4, gras: 0.2, unidad: 200 },
+    { nombre: 'Café con leche', alias: ['cafe con leche', 'café con leche'], cal: 42, prot: 2.1, carb: 4.2, gras: 1.8, unidad: 200 },
+    // Comida rápida y platos completos
+    { nombre: 'Pizza', alias: ['pizza'], cal: 266, prot: 11, carb: 33, gras: 10, unidad: 150 },
+    { nombre: 'Hamburguesa completa', alias: ['hamburguesa completa', 'hamburguesa con pan'], cal: 295, prot: 17, carb: 24, gras: 14, unidad: 220 },
+    { nombre: 'Perrito caliente', alias: ['perrito caliente', 'hot dog'], cal: 290, prot: 10.5, carb: 24, gras: 17, unidad: 150 },
+    { nombre: 'Sushi variado', alias: ['sushi'], cal: 150, prot: 6, carb: 27, gras: 1.5, unidad: 200 },
+    { nombre: 'Aceite de oliva', alias: ['aceite de oliva', 'aceite'], cal: 884, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Mayonesa', alias: ['mayonesa'], cal: 680, prot: 1, carb: 2.6, gras: 75, unidad: 15 },
+    { nombre: 'Kétchup', alias: ['ketchup', 'kétchup'], cal: 112, prot: 1.2, carb: 27, gras: 0.1, unidad: 15 },
+];
+
+const NUMERO_PALABRA = { 'un': 1, 'una': 1, 'uno': 1, 'dos': 2, 'tres': 3, 'cuatro': 4, 'cinco': 5, 'seis': 6, 'siete': 7, 'ocho': 8, 'medio': 0.5, 'media': 0.5 };
+
+const quitarAcentos = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const normalizarTexto = (s) => quitarAcentos((s || '').toLowerCase().trim());
+
+// Busca el alimento cuya alias coincida mejor (más largo = más específico) dentro del texto
+const buscarAlimento = (textoOriginal) => {
+    const texto = normalizarTexto(textoOriginal);
+    let mejor = null;
+    let mejorLongitud = 0;
+    FOOD_DB.forEach(item => {
+        item.alias.forEach(alias => {
+            const aliasNorm = normalizarTexto(alias);
+            if (texto.includes(aliasNorm) && aliasNorm.length > mejorLongitud) {
+                mejor = item;
+                mejorLongitud = aliasNorm.length;
+            }
+        });
+    });
+    return mejor;
+};
+
+// Intenta extraer una cantidad en gramos del texto (ej. "200 gramos", "dos huevos")
+const extraerGramos = (textoOriginal, item) => {
+    const texto = normalizarTexto(textoOriginal);
+    // 1) Número + unidad de peso explícita (g, gr, gramos, kg, kilo...)
+    const matchPeso = texto.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kilogramos?|gr|grs|gramos?|g)\b/);
+    if (matchPeso) {
+        let cantidad = parseFloat(matchPeso[1].replace(',', '.'));
+        if (/kg|kilo/.test(matchPeso[2])) cantidad *= 1000;
+        return { gramos: Math.round(cantidad), detectado: true };
+    }
+    // 2) Número (dígito o palabra) de unidades, ej. "dos huevos", "3 platanos"
+    if (item && item.unidad) {
+        const matchDigito = texto.match(/(\d+(?:[.,]\d+)?)\s*(unidades?|piezas?)?/);
+        const palabras = texto.split(/\s+/);
+        let cantidadUnidades = null;
+        for (const palabra of palabras) {
+            if (NUMERO_PALABRA[palabra] !== undefined) { cantidadUnidades = NUMERO_PALABRA[palabra]; break; }
+        }
+        if (cantidadUnidades === null && matchDigito && matchDigito[1] && !matchPeso) {
+            cantidadUnidades = parseFloat(matchDigito[1].replace(',', '.'));
+        }
+        if (cantidadUnidades) {
+            return { gramos: Math.round(item.unidad * cantidadUnidades), detectado: true };
+        }
+    }
+    // 3) Sin cantidad detectada → ración por defecto (unidad del alimento o 100 g)
+    return { gramos: item && item.unidad ? item.unidad : 100, detectado: false };
+};
+
+// Calcula macros escalando los valores por 100 g al peso indicado
+const calcularMacrosPorPeso = (item, gramos) => {
+    const factor = gramos / 100;
+    return {
+        alimento: item.nombre,
+        calorias: Math.round(item.cal * factor),
+        proteinas: Math.round(item.prot * factor * 10) / 10,
+        carbohidratos: Math.round(item.carb * factor * 10) / 10,
+        grasas: Math.round(item.gras * factor * 10) / 10,
+        gramos: Math.round(gramos)
+    };
+};
 
 const loadEntries = () => {
     try {
@@ -126,13 +305,9 @@ const App = () => {
     const [toast, setToast] = useState(null);
     const [isListening, setIsListening] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [aiLoading, setAiLoading] = useState(false);
     const [showCreator, setShowCreator] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
     const [guideTab, setGuideTab] = useState('voz');
-    const [apiKey, setApiKeyState] = useState(() => localStorage.getItem(API_KEY_STORAGE) || '');
-    const [showSettings, setShowSettings] = useState(false);
-    const [apiKeyDraft, setApiKeyDraft] = useState('');
     const [voiceGuideShown, setVoiceGuideShown] = useState(() => localStorage.getItem(GUIDE_SHOWN_KEY) === 'true');
     const inputRef = useRef(null);
     const recognitionRef = useRef(null);
@@ -175,44 +350,43 @@ const App = () => {
     const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
     // ============================================================
-    //  GEMINI — análisis nutricional estructurado
+    //  BASE DE DATOS LOCAL — análisis nutricional estructurado
+    //  (sin API externa: todo se calcula en el propio dispositivo)
     // ============================================================
-    const analyzeWithGemini = async (userText) => {
-        if (!apiKey) {
-            setToast('⚠️ Añade tu API Key de Gemini en Ajustes');
-            setShowSettings(true);
+    const lastMatchRef = useRef(null); // guarda el alimento de la BD encontrado, para poder recalcular si cambia el peso
+
+    const analyzeLocal = (userText, gramosManual) => {
+        const item = buscarAlimento(userText);
+        if (!item) {
+            lastMatchRef.current = null;
+            setToast('🤔 No está en la base de datos, introduce los valores a mano');
             return null;
         }
-        const prompt = `Eres un nutricionista experto. Analiza esta comida descrita por voz o texto: "${userText}"
+        lastMatchRef.current = item;
+        let gramos;
+        let avisoDefecto = false;
+        if (gramosManual && Number(gramosManual) > 0) {
+            gramos = Number(gramosManual);
+        } else {
+            const extraido = extraerGramos(userText, item);
+            gramos = extraido.gramos;
+            avisoDefecto = !extraido.detectado;
+        }
+        const resultado = calcularMacrosPorPeso(item, gramos);
+        if (avisoDefecto) {
+            setToast(`📦 "${item.nombre}" · usando ${resultado.gramos} g por defecto, ajusta el peso si quieres`);
+        } else {
+            setToast(`✅ "${item.nombre}" · ${resultado.gramos} g`);
+        }
+        return resultado;
+    };
 
-Responde ÚNICAMENTE con un objeto JSON válido, sin markdown, sin backticks y sin texto antes o después, con exactamente estas claves:
-{"alimento": "nombre corto del alimento o comida", "calorias": numero, "proteinas": numero, "carbohidratos": numero, "grasas": numero, "reconocido": true_o_false}
-
-Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la frase no describe comida, responde "reconocido": false y el resto en 0.`;
-        try {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                }
-            );
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error?.message || ('Error HTTP ' + response.status));
-            }
-            const data = await response.json();
-            let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            raw = raw.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
-            const parsed = JSON.parse(raw);
-            if (!parsed.reconocido) {
-                setToast('🤔 No reconocido, intenta describirlo de otra forma');
-                return null;
-            }
-            return parsed;
-        } catch (err) {
-            setToast('⚠️ Error con Gemini: ' + err.message);
-            return null;
+    // Recalcula macros cuando el usuario cambia manualmente el campo "Peso" del formulario
+    const recalcularPorPeso = (nuevoPeso) => {
+        setFormData(prev => ({ ...prev, peso: nuevoPeso }));
+        if (lastMatchRef.current && Number(nuevoPeso) > 0) {
+            const resultado = calcularMacrosPorPeso(lastMatchRef.current, Number(nuevoPeso));
+            setFormData(prev => ({ ...prev, peso: nuevoPeso, calorias: resultado.calorias, proteinas: resultado.proteinas, carbohidratos: resultado.carbohidratos, grasas: resultado.grasas }));
         }
     };
 
@@ -239,23 +413,24 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
             setIsListening(false);
         };
         rec.onend = () => setIsListening(false);
-        rec.onresult = async (event) => {
+        rec.onresult = (event) => {
             const text = event.results[0][0].transcript.trim();
-            setToast('🧠 Analizando con IA...');
-            const parsed = await analyzeWithGemini(text);
+            const parsed = analyzeLocal(text);
             if (parsed) {
                 setFormData({
                     alimento: parsed.alimento || text,
-                    calorias: Math.round(parsed.calorias || 0),
-                    proteinas: Math.round(parsed.proteinas || 0),
-                    carbohidratos: Math.round(parsed.carbohidratos || 0),
-                    grasas: Math.round(parsed.grasas || 0),
+                    calorias: parsed.calorias,
+                    proteinas: parsed.proteinas,
+                    carbohidratos: parsed.carbohidratos,
+                    grasas: parsed.grasas,
+                    peso: String(parsed.gramos),
                     fecha: todayStr()
                 });
-                setEditingId(null);
-                setModalOpen(true);
-                setToast('✅ Revisa y guarda');
+            } else {
+                setFormData({ ...EMPTY_FORM, alimento: text, fecha: todayStr() });
             }
+            setEditingId(null);
+            setModalOpen(true);
         };
         try { rec.start(); } catch (e) { setToast('⚠️ Error al iniciar el micrófono'); }
     };
@@ -281,21 +456,19 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
         try { rec.start(); } catch (e) {}
     };
 
-    const analyzeConceptFromModal = async () => {
+    const analyzeConceptFromModal = () => {
         if (!formData.alimento) { setToast('⚠️ Escribe o dicta primero el alimento'); return; }
-        setAiLoading(true);
-        const parsed = await analyzeWithGemini(formData.alimento);
-        setAiLoading(false);
+        const parsed = analyzeLocal(formData.alimento, formData.peso);
         if (parsed) {
             setFormData(prev => ({
                 ...prev,
                 alimento: parsed.alimento || prev.alimento,
-                calorias: Math.round(parsed.calorias || 0),
-                proteinas: Math.round(parsed.proteinas || 0),
-                carbohidratos: Math.round(parsed.carbohidratos || 0),
-                grasas: Math.round(parsed.grasas || 0)
+                calorias: parsed.calorias,
+                proteinas: parsed.proteinas,
+                carbohidratos: parsed.carbohidratos,
+                grasas: parsed.grasas,
+                peso: String(parsed.gramos)
             }));
-            setToast('✅ Valores estimados por IA');
         }
     };
 
@@ -308,9 +481,10 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
         setModalOpen(true);
     };
     const handleOpenEdit = (entry) => {
+        lastMatchRef.current = null;
         setFormData({
             alimento: entry.alimento, calorias: entry.calorias, proteinas: entry.proteinas,
-            carbohidratos: entry.carbohidratos, grasas: entry.grasas, fecha: entry.date
+            carbohidratos: entry.carbohidratos, grasas: entry.grasas, peso: String(entry.gramos || 100), fecha: entry.date
         });
         setEditingId(entry.id);
         setModalOpen(true);
@@ -323,7 +497,8 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
             setEntries(prev => prev.map(en => en.id === editingId ? {
                 ...en, alimento: formData.alimento, date: formData.fecha,
                 calorias: Number(formData.calorias) || 0, proteinas: Number(formData.proteinas) || 0,
-                carbohidratos: Number(formData.carbohidratos) || 0, grasas: Number(formData.grasas) || 0
+                carbohidratos: Number(formData.carbohidratos) || 0, grasas: Number(formData.grasas) || 0,
+                gramos: Number(formData.peso) || 100
             } : en));
             setToast('✅ Registro actualizado');
         } else {
@@ -333,7 +508,8 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
                 hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
                 alimento: formData.alimento || 'Alimento',
                 calorias: Number(formData.calorias) || 0, proteinas: Number(formData.proteinas) || 0,
-                carbohidratos: Number(formData.carbohidratos) || 0, grasas: Number(formData.grasas) || 0
+                carbohidratos: Number(formData.carbohidratos) || 0, grasas: Number(formData.grasas) || 0,
+                gramos: Number(formData.peso) || 100
             }]);
             setToast('✅ Registrado');
         }
@@ -348,13 +524,6 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
             setEntries([]);
             setToast('🗑️ Historial borrado');
         }
-    };
-
-    const saveApiKey = () => {
-        localStorage.setItem(API_KEY_STORAGE, apiKeyDraft.trim());
-        setApiKeyState(apiKeyDraft.trim());
-        setShowSettings(false);
-        setToast('✅ API Key guardada');
     };
 
     const dismissVoiceGuide = () => {
@@ -396,9 +565,9 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
                             <div className="flex items-center gap-3"><span className="text-indigo-400 text-sm">💬</span><span className="text-slate-300 text-sm">"pechuga de pollo con arroz"</span></div>
                         </div>
                         <div className="text-xs text-slate-400 space-y-2 text-left mb-6">
-                            <p>📌 La IA calcula calorías y macros por ti</p>
+                            <p>📌 Busca el alimento en la base de datos y calcula los macros por el peso</p>
                             <p>🔄 Puedes corregir cualquier valor antes de guardar</p>
-                            <p>⚡ Necesita conexión a internet</p>
+                            <p>⚡ El micrófono necesita conexión a internet, el cálculo no</p>
                         </div>
                         <button onClick={dismissVoiceGuide} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">
                             ENTENDIDO
@@ -423,9 +592,6 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
                 <div className="flex items-center gap-2">
                     <button onClick={toggleTheme} className="theme-toggle" title="Cambiar tema">
                         <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i>
-                    </button>
-                    <button onClick={() => { setApiKeyDraft(apiKey); setShowSettings(true); }} className="bg-white/10 hover:bg-white/20 text-white w-9 h-9 rounded-xl font-bold text-xs shadow-lg active:scale-95 transition-transform flex items-center justify-center" title="Ajustes">
-                        <i className="fa-solid fa-gear"></i>
                     </button>
                 </div>
             </div>
@@ -553,24 +719,30 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
                                         <i className={`fa-solid ${isListening ? 'fa-circle-stop' : 'fa-microphone'}`}></i>
                                     </button>
                                 </div>
-                                <button type="button" onClick={analyzeConceptFromModal} disabled={aiLoading || !isOnline}
-                                    className="mt-2 text-[12px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 disabled:opacity-40">
-                                    <i className={`fa-solid ${aiLoading ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
-                                    {aiLoading ? 'Analizando...' : 'Analizar con IA'}
+                                <button type="button" onClick={analyzeConceptFromModal}
+                                    className="mt-2 text-[12px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5">
+                                    <i className="fa-solid fa-magnifying-glass"></i>
+                                    Buscar en la base de datos
                                 </button>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Calorías</label>
-                                    <input type="number" inputMode="numeric" value={formData.calorias}
-                                        onChange={e => setFormData({ ...formData, calorias: e.target.value })}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="0" required />
+                                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Peso (g)</label>
+                                    <input type="number" inputMode="numeric" value={formData.peso}
+                                        onChange={e => recalcularPorPeso(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="100" />
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Fecha</label>
                                     <input type="date" value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" required />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Calorías</label>
+                                <input type="number" inputMode="numeric" value={formData.calorias}
+                                    onChange={e => setFormData({ ...formData, calorias: e.target.value })}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="0" required />
                             </div>
                             <div className="grid grid-cols-3 gap-3">
                                 <div>
@@ -598,29 +770,6 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>, document.body
-            )}
-
-            {/* MODAL AJUSTES (API KEY) */}
-            {showSettings && ReactDOM.createPortal(
-                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-base font-black text-white">⚙️ Ajustes</h3>
-                            <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
-                        </div>
-                        <div className="mb-4">
-                            <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">API Key de Gemini</label>
-                            <input type="password" value={apiKeyDraft} onChange={e => setApiKeyDraft(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500"
-                                placeholder="Pega tu API Key aquí" autoComplete="off" />
-                            <p className="text-[11px] text-slate-400 mt-2">Se guarda solo en este móvil (localStorage), nunca sale de aquí.</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={saveApiKey} className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">GUARDAR</button>
-                            <button onClick={() => setShowSettings(false)} className="py-3.5 px-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-sm transition-all active:scale-95">CERRAR</button>
-                        </div>
                     </div>
                 </div>, document.body
             )}
@@ -666,10 +815,11 @@ Cantidades totales estimadas en kcal y gramos, redondeadas a enteros. Si la fras
                             {guideTab === 'voz' && (
                                 <>
                                     <h4 className="text-white font-black text-base">Cómo dictar tu comida</h4>
-                                    <p>Toca el micrófono grande y describe lo que has comido en una frase natural: <span className="text-white font-bold">"dos huevos fritos con una tostada de pan integral"</span>. La IA estima calorías, proteínas, carbohidratos y grasas automáticamente.</p>
-                                    <p><span className="text-white font-bold">Revisión antes de guardar:</span> tras dictar, se abre un formulario con los valores ya rellenos. Puedes corregir cualquier número antes de pulsar GUARDAR — la IA estima, tú tienes la última palabra.</p>
-                                    <p><span className="text-white font-bold">Sin voz:</span> pulsa "Añadir manual" para escribir el alimento tú mismo. Dentro del formulario también puedes dictar solo el nombre y luego pulsar "Analizar con IA" para que calcule los macros.</p>
-                                    <p>⚡ El reconocimiento de voz y el análisis con IA necesitan conexión a internet.</p>
+                                    <p>Toca el micrófono grande y describe lo que has comido, indicando a ser posible la cantidad: <span className="text-white font-bold">"200 gramos de pechuga de pollo"</span> o <span className="text-white font-bold">"dos huevos fritos"</span>. La app busca el alimento en su base de datos local y calcula calorías, proteínas, carbohidratos y grasas según el peso.</p>
+                                    <p><span className="text-white font-bold">Ajustar el peso:</span> tras dictar, se abre un formulario con los valores ya rellenos y el campo "Peso (g)" con la cantidad detectada. Si cambias el peso, los macros se recalculan solos al momento.</p>
+                                    <p><span className="text-white font-bold">Sin voz:</span> pulsa "Añadir manual" para escribir el alimento tú mismo, indica el peso y pulsa "Buscar en la base de datos" para que calcule los macros.</p>
+                                    <p><span className="text-white font-bold">Si no lo encuentra:</span> puedes rellenar calorías y macros a mano; se guardan igualmente.</p>
+                                    <p>⚡ El reconocimiento de voz necesita conexión a internet, pero la búsqueda y el cálculo de macros funcionan siempre, sin conexión.</p>
                                 </>
                             )}
                             {guideTab === 'historial' && (

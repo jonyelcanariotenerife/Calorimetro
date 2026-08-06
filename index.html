@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Calorímetro</title>
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#020205" />
+    <link rel="icon" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Calorímetro" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800;900&display=swap" rel="stylesheet" />
+
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020205; color: #e2e8f0; min-height: 100vh; padding-bottom: 40px; transition: background-color 0.3s, color 0.3s; }
+        body.light-mode { background-color: #f4efe6; color: #2b2620; }
+        body.light-mode .bg-white\/5 { background-color: #efe8da; }
+        body.light-mode .border-white\/10 { border-color: rgba(43,38,32,0.1); }
+        body.light-mode .border-white\/5 { border-color: rgba(43,38,32,0.07); }
+        body.light-mode .bg-black\/30 { background-color: rgba(43,38,32,0.05); }
+        body.light-mode .bg-black\/40 { background-color: rgba(43,38,32,0.07); }
+        body.light-mode .text-slate-400 { color: #79725f; }
+        body.light-mode .text-slate-300 { color: #4a4436; }
+        body.light-mode .text-white { color: #2b2620; }
+        body.light-mode .border-indigo-500\/20 { border-color: rgba(124,110,201,0.25); }
+        body.light-mode .border-indigo-500\/30 { border-color: rgba(124,110,201,0.35); }
+        body.light-mode .text-indigo-400, body.light-mode .text-indigo-300 { color: #6a5bc2; }
+        body.light-mode .text-rose-400 { color: #b8496a; }
+        body.light-mode .text-emerald-400, body.light-mode .text-emerald-300 { color: #3f9e78; }
+        body.light-mode .text-amber-400 { color: #b3823a; }
+        body.light-mode .bg-indigo-600 { background-color: #7c6ec9; }
+        body.light-mode .bg-indigo-600:hover { background-color: #6a5bc2; }
+        body.light-mode .bg-indigo-500\/10 { background-color: rgba(124,110,201,0.1); }
+        body.light-mode .bg-indigo-500\/20 { background-color: rgba(124,110,201,0.16); }
+        body.light-mode .bg-rose-500\/10 { background-color: rgba(199,107,138,0.1); }
+        body.light-mode .bg-rose-500\/20 { background-color: rgba(199,107,138,0.16); }
+        body.light-mode .bg-emerald-500\/10 { background-color: rgba(79,172,134,0.1); }
+        body.light-mode .bg-emerald-500\/20 { background-color: rgba(79,172,134,0.16); }
+        body.light-mode .bg-amber-500\/10 { background-color: rgba(179,130,58,0.1); }
+        body.light-mode .bg-amber-500\/20 { background-color: rgba(179,130,58,0.16); }
+        body.light-mode .bg-\[\#0f111a\] { background-color: #fbf8f2; border-color: rgba(43,38,32,0.1) !important; }
+        body.light-mode .bg-black\/80 { background-color: rgba(43,38,32,0.35); }
+        body.light-mode .toast { background: #fbf8f2; border-color: rgba(43,38,32,0.1); color: #2b2620; }
+        body.light-mode .theme-toggle { background: rgba(43,38,32,0.05); border-color: rgba(43,38,32,0.1); color: #2b2620; }
+        body.light-mode input, body.light-mode select, body.light-mode textarea { background-color: rgba(43,38,32,0.03) !important; color: #2b2620 !important; }
+        body.light-mode input::placeholder, body.light-mode textarea::placeholder { color: #9b927c; }
+        body.light-mode .bg-slate-700\/50 { background-color: rgba(43,38,32,0.06); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(6px) scale(0.99); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+        .animate-fade { animation: fadeIn 0.2s ease-out forwards; }
+        .entry-enter { animation: slideIn 0.25s ease-out forwards; }
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        .theme-toggle { cursor: pointer; transition: all 0.2s; font-size: 0.9rem; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+        .theme-toggle:hover { background: rgba(255,255,255,0.1); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; height: 100dvh; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f111a; border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px; border-radius: 16px; font-weight: 700; font-size: 0.8rem; z-index: 100; animation: fadeIn 0.3s ease-out; backdrop-filter: blur(8px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 90vw; text-align: center; }
+        .mic-btn { transition: all 0.3s ease; }
+        .mic-btn.active { background: rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.5); animation: pulse 1s ease-in-out infinite; }
+        .mic-hero { transition: all 0.25s ease; }
+        .mic-hero.active { animation: pulse 1s ease-in-out infinite; }
+        .mic-hero:active { transform: scale(0.94); }
+        .kcal-hero { font-size: 2.6rem; font-weight: 900; line-height: 1.1; letter-spacing: -0.01em; }
+        .progress-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; transition: all 0.3s; }
+        .progress-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
+        .day-closed-badge { background: rgba(255,255,255,0.08); border-radius: 999px; padding: 2px 12px; font-size: 0.7rem; font-weight: 700; color: #a0aec0; border: 1px solid rgba(255,255,255,0.05); }
+        .confirm-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+        .confirm-box { background: #0f111a; border: 1px solid rgba(255,255,255,0.1); border-radius: 2rem; padding: 2rem; max-width: 380px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .confirm-box h3 { font-weight: 900; font-size: 1.2rem; margin-bottom: 0.5rem; color: white; }
+        .confirm-box p { font-size: 0.9rem; color: #a0aec0; margin-bottom: 1.5rem; }
+        .confirm-actions { display: flex; gap: 0.75rem; }
+        .confirm-actions button { flex: 1; padding: 0.75rem; border-radius: 1rem; font-weight: 700; font-size: 0.9rem; border: none; cursor: pointer; transition: all 0.2s; }
+        .confirm-actions .btn-confirm { background: #6366f1; color: white; }
+        .confirm-actions .btn-confirm:hover { background: #4f46e5; }
+        .confirm-actions .btn-cancel { background: rgba(255,255,255,0.1); color: #a0aec0; }
+        .confirm-actions .btn-cancel:hover { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+<div id="root" class="max-w-md mx-auto px-3 pt-3"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const STORAGE_KEY = 'calorimetro_entries';
+const THEME_KEY = 'calorimetro_theme';
+const GUIDE_SHOWN_KEY = 'calorimetro_voice_guide_shown';
+const PROFILE_KEY = 'calorimetro_profile';
+const CLOSED_DAYS_KEY = 'calorimetro_closed_days';
+const CUSTOM_FOODS_KEY = 'calorimetro_custom_foods'; // Deprecado, solo para migración
+const DATABASE_KEY = 'calorimetro_database';
+
+// Recetas aproximadas para los platos combinados del catálogo
+const RECIPES = {
+    'Pechuga de pollo con ensalada mixta': { ingredientes: [{ nombre: 'Pechuga de pollo', gramos: 150 }, { nombre: 'Lechuga', gramos: 80 }, { nombre: 'Tomate', gramos: 60 }, { nombre: 'Cebolla', gramos: 20 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta negra', 'zumo de limón'], tiempoPrep: '10 min', tiempoCoccion: '10 min', dificultad: 'Fácil', pasos: ['Saca la pechuga de la nevera 10 minutos antes.', 'Calienta una sartén o plancha antiadherente a fuego medio-alto.', 'Cocina 5-6 minutos por el primer lado.', 'Mientras se hace el pollo, prepara la ensalada.', 'Monta el plato con la ensalada como base.'], consejo: 'Si la pechuga es muy gruesa, ábrela por la mitad.' },
+    'Pollo asado con papas asadas': { ingredientes: [{ nombre: 'Pollo con piel', gramos: 150 }, { nombre: 'Patata cocida', gramos: 170 }, { nombre: 'Aceite de oliva', gramos: 10 }, { nombre: 'Ajo', gramos: 5 }], extras: ['sal', 'pimentón', 'romero'], tiempoPrep: '10 min', tiempoCoccion: '35-40 min', dificultad: 'Fácil', pasos: ['Precalienta el horno a 200°C.', 'Pela las papas y trocéalas.', 'Unta el pollo y colócalo sobre las papas.', 'Hornea 35-40 minutos.', 'Deja reposar el pollo 5 minutos.'], consejo: 'Si quitas la piel, unta el pollo con un poco más de aceite.' },
+    'Pavo a la plancha con arroz integral': { ingredientes: [{ nombre: 'Pavo', gramos: 140 }, { nombre: 'Arroz integral cocido', gramos: 180 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'perejil picado'], tiempoPrep: '5 min', tiempoCoccion: '15 min', dificultad: 'Fácil', pasos: ['Cuece el arroz integral.', 'Salpimienta el filete de pavo.', 'Cocina el pavo a la plancha.', 'Saltea el arroz.', 'Sirve todo junto.'], consejo: 'El pavo se seca fácilmente, retíralo a tiempo.' },
+    'Ternera magra con brócoli y zanahoria': { ingredientes: [{ nombre: 'Ternera', gramos: 130 }, { nombre: 'Brócoli', gramos: 130 }, { nombre: 'Zanahoria', gramos: 80 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'ajo en polvo'], tiempoPrep: '10 min', tiempoCoccion: '12 min', dificultad: 'Fácil', pasos: ['Cuece el brócoli y la zanahoria.', 'Sella la carne en sartén.', 'Deja reposar la carne.', 'Saltea las verduras y sirve.'], consejo: 'No cuezas de más el brócoli.' },
+    'Lomo de cerdo a la plancha con papas guisadas': { ingredientes: [{ nombre: 'Solomillo de cerdo', gramos: 140 }, { nombre: 'Patata cocida', gramos: 170 }, { nombre: 'Tomate triturado', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'laurel', 'ajo'], tiempoPrep: '10 min', tiempoCoccion: '20 min', dificultad: 'Fácil', pasos: ['Guisa las papas con tomate y laurel.', 'Cocina el lomo a la plancha.', 'Sirve todo caliente.'], consejo: 'Machaca un poco de papa para espesar el caldo.' },
+    'Carne picada magra con pisto de verduras': { ingredientes: [{ nombre: 'Carne picada de ternera', gramos: 130 }, { nombre: 'Pisto de verduras', gramos: 190 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'orégano'], tiempoPrep: '5 min', tiempoCoccion: '15 min', dificultad: 'Fácil', pasos: ['Saltea la carne picada.', 'Añade el pisto.', 'Cocina a fuego bajo 5 minutos.'], consejo: 'Retira el exceso de líquido de la carne si es necesario.' },
+    'Pechuga de pollo con quinoa y verduras': { ingredientes: [{ nombre: 'Pechuga de pollo', gramos: 140 }, { nombre: 'Quinoa cocida', gramos: 150 }, { nombre: 'Calabacín', gramos: 40 }, { nombre: 'Pimiento rojo', gramos: 20 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'comino'], tiempoPrep: '10 min', tiempoCoccion: '18 min', dificultad: 'Fácil', pasos: ['Cuece la quinoa.', 'Cocina la pechuga a la plancha.', 'Saltea calabacín y pimiento.', 'Mezcla las verduras con la quinoa.'], consejo: 'La quinoa fría se saltea mejor.' },
+    'Solomillo de cerdo con champiñones al ajillo': { ingredientes: [{ nombre: 'Solomillo de cerdo', gramos: 150 }, { nombre: 'Champiñones', gramos: 170 }, { nombre: 'Ajo', gramos: 10 }, { nombre: 'Aceite de oliva', gramos: 10 }], extras: ['sal', 'pimienta', 'perejil picado'], tiempoPrep: '10 min', tiempoCoccion: '15 min', dificultad: 'Fácil', pasos: ['Sella los medallones de solomillo.', 'Saltea los champiñones al ajillo.', 'Devuelve los medallones para integrarlos.'], consejo: 'No amontones los champiñones o sudarán.' },
+    'Salmón al horno con espárragos trigueros': { ingredientes: [{ nombre: 'Salmón', gramos: 150 }, { nombre: 'Espárragos verdes', gramos: 170 }, { nombre: 'Aceite de oliva', gramos: 10 }], extras: ['sal', 'pimienta', 'limón', 'ajo en polvo'], tiempoPrep: '10 min', tiempoCoccion: '15 min', dificultad: 'Fácil', pasos: ['Precalienta horno a 200°C.', 'Coloca el salmón y espárragos en bandeja.', 'Hornea 12-15 minutos.'], consejo: 'Saca los espárragos antes si son finos.' },
+    'Merluza a la plancha con ensalada verde': { ingredientes: [{ nombre: 'Merluza', gramos: 160 }, { nombre: 'Lechuga', gramos: 100 }, { nombre: 'Pepino', gramos: 60 }, { nombre: 'Tomate', gramos: 20 }, { nombre: 'Aceite de oliva', gramos: 6 }], extras: ['sal', 'pimienta', 'limón'], tiempoPrep: '10 min', tiempoCoccion: '8 min', dificultad: 'Fácil', pasos: ['Seca la merluza y cocínala.', 'Prepara la ensalada.', 'Sirve con limón.'], consejo: 'La merluza se hace muy rápido.' },
+    'Cherne a la plancha con papas guisadas': { ingredientes: [{ nombre: 'Cherne', gramos: 150 }, { nombre: 'Patata cocida', gramos: 170 }, { nombre: 'Tomate triturado', gramos: 25 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'ajo', 'laurel'], tiempoPrep: '10 min', tiempoCoccion: '20 min', dificultad: 'Media', pasos: ['Guisa las papas.', 'Cocina el cherne a la plancha.', 'Sirve caliente.'], consejo: 'No muevas mucho el pescado en la plancha.' },
+    'Atún a la plancha con pimientos asados': { ingredientes: [{ nombre: 'Atún fresco', gramos: 150 }, { nombre: 'Pimiento rojo', gramos: 120 }, { nombre: 'Pimiento verde', gramos: 60 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'ajo en polvo'], tiempoPrep: '10 min', tiempoCoccion: '25 min', dificultad: 'Fácil', pasos: ['Asa los pimientos.', 'Sella el atún en sartén fuerte.', 'Sirve el atún sobre los pimientos.'], consejo: 'Sella el atún poco tiempo para que quede jugoso.' },
+    'Dorada al horno con verduras variadas': { ingredientes: [{ nombre: 'Dorada', gramos: 160 }, { nombre: 'Calabacín', gramos: 80 }, { nombre: 'Zanahoria', gramos: 60 }, { nombre: 'Cebolla', gramos: 40 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'limón', 'perejil'], tiempoPrep: '10 min', tiempoCoccion: '25 min', dificultad: 'Fácil', pasos: ['Precalienta horno.', 'Haz cama de verduras y hornea 10 min.', 'Añade la dorada y hornea 15 min más.'], consejo: 'Pide el pescado limpio en la pescadería.' },
+    'Bacalao desalado con pisto': { ingredientes: [{ nombre: 'Bacalao salado desalado', gramos: 140 }, { nombre: 'Pisto de verduras', gramos: 190 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta'], tiempoPrep: '5 min', tiempoCoccion: '12 min', dificultad: 'Fácil', pasos: ['Cocina el bacalao a la plancha.', 'Calienta el pisto.', 'Sirve el pescado sobre el pisto.'], consejo: 'Ojo con la sal, el bacalao ya aporta.' },
+    'Sepia a la plancha con ensalada de tomate': { ingredientes: [{ nombre: 'Sepia', gramos: 150 }, { nombre: 'Tomate', gramos: 150 }, { nombre: 'Cebolla', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'ajo picado', 'perejil'], tiempoPrep: '10 min', tiempoCoccion: '8 min', dificultad: 'Fácil', pasos: ['Seca la sepia.', 'Sella en sartén fuerte 2-3 min.', 'Acompaña con ensalada.'], consejo: 'No la pases de fuego para que no quede gomosa.' },
+    'Gambas salteadas con calabacín y ajo': { ingredientes: [{ nombre: 'Gamba', gramos: 130 }, { nombre: 'Calabacín', gramos: 180 }, { nombre: 'Ajo', gramos: 10 }, { nombre: 'Aceite de oliva', gramos: 10 }], extras: ['sal', 'perejil'], tiempoPrep: '10 min', tiempoCoccion: '8 min', dificultad: 'Fácil', pasos: ['Dora ajo.', 'Saltea calabacín.', 'Añade gambas y saltea todo junto.'], consejo: 'Saltea las gambas solo hasta que cambien de color.' },
+    'Tortilla francesa con champiñones': { ingredientes: [{ nombre: 'Huevo', gramos: 120 }, { nombre: 'Champiñones', gramos: 70 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'perejil'], tiempoPrep: '5 min', tiempoCoccion: '8 min', dificultad: 'Fácil', pasos: ['Saltea champiñones.', 'Bate huevos y mezcla.', 'Cuaja tortilla en sartén.'], consejo: 'Deja el centro un poco líquido si te gusta jugosa.' },
+    'Huevos revueltos con espinacas y pavo': { ingredientes: [{ nombre: 'Huevo', gramos: 100 }, { nombre: 'Espinacas', gramos: 60 }, { nombre: 'Pavo fiambre en lonchas', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta'], tiempoPrep: '5 min', tiempoCoccion: '6 min', dificultad: 'Fácil', pasos: ['Saltea espinacas y pavo.', 'Añade huevos batidos.', 'Remueve a fuego bajo.'], consejo: 'Retira del fuego justo antes de que cuaje del todo.' },
+    'Tortilla de atún con dos huevos': { ingredientes: [{ nombre: 'Huevo', gramos: 110 }, { nombre: 'Atún en lata', gramos: 60 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta'], tiempoPrep: '5 min', tiempoCoccion: '6 min', dificultad: 'Fácil', pasos: ['Escurre atún.', 'Bate huevos con el atún.', 'Cuaja tortilla.'], consejo: 'Añadir cebolla picada mejora mucho el sabor.' },
+    'Huevos a la plancha con batata asada': { ingredientes: [{ nombre: 'Huevo', gramos: 110 }, { nombre: 'Batata', gramos: 170 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'pimentón'], tiempoPrep: '10 min', tiempoCoccion: '34 min', dificultad: 'Fácil', pasos: ['Hornea batata en rodajas.', 'Haz los huevos a la plancha.', 'Sirve todo.'], consejo: 'Puedes cocer la batata para ganar tiempo.' },
+    'Tortilla de calabacín y cebolla': { ingredientes: [{ nombre: 'Huevo', gramos: 110 }, { nombre: 'Calabacín', gramos: 70 }, { nombre: 'Cebolla', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta'], tiempoPrep: '10 min', tiempoCoccion: '12 min', dificultad: 'Fácil', pasos: ['Pocha cebolla y calabacín.', 'Mezcla con huevos.', 'Cuaja tortilla.'], consejo: 'Escurre bien el calabacín antes de cuajar.' },
+    'Huevos revueltos con tomates cherry': { ingredientes: [{ nombre: 'Huevo', gramos: 110 }, { nombre: 'Tomate', gramos: 70 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta'], tiempoPrep: '5 min', tiempoCoccion: '6 min', dificultad: 'Fácil', pasos: ['Saltea tomate.', 'Añade huevos batidos.', 'Cuaja lentamente.'], consejo: 'Retira a tiempo para no secar.' },
+    'Revuelto de claras con gambas y ajos tiernos': { ingredientes: [{ nombre: 'Clara de huevo', gramos: 140 }, { nombre: 'Gamba', gramos: 60 }, { nombre: 'Ajo', gramos: 15 }, { nombre: 'Aceite de oliva', gramos: 6 }], extras: ['sal', 'pimienta', 'perejil'], tiempoPrep: '10 min', tiempoCoccion: '8 min', dificultad: 'Fácil', pasos: ['Saltea ajos y gambas.', 'Añade claras y cuaja rápido.'], consejo: 'Las claras secan muy rápido, vigila.' },
+    'Ensalada de garbanzos con atún y tomate': { ingredientes: [{ nombre: 'Garbanzos cocidos', gramos: 150 }, { nombre: 'Atún en lata', gramos: 60 }, { nombre: 'Tomate', gramos: 100 }, { nombre: 'Cebolla', gramos: 20 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'vinagre', 'perejil'], tiempoPrep: '10 min', tiempoCoccion: '0 min (en frío)', dificultad: 'Fácil', pasos: ['Escurre garbanzos.', 'Corta verduras.', 'Mezcla con atún y aliña.'], consejo: 'Déjalo reposar un rato antes de comer.' },
+    'Lentejas estofadas con verduras': { ingredientes: [{ nombre: 'Lentejas cocidas', gramos: 220 }, { nombre: 'Zanahoria', gramos: 60 }, { nombre: 'Cebolla', gramos: 40 }, { nombre: 'Pimiento rojo', gramos: 30 }], extras: ['sal', 'pimienta', 'laurel', 'comino', 'pimentón'], tiempoPrep: '10 min', tiempoCoccion: '20 min', dificultad: 'Fácil', pasos: ['Pocha las verduras.', 'Añade lentejas y especias.', 'Cuece con agua.'], consejo: 'Añade más agua si queda seco.' },
+    'Tofu a la plancha con quinoa y vegetales': { ingredientes: [{ nombre: 'Tofu', gramos: 130 }, { nombre: 'Quinoa cocida', gramos: 150 }, { nombre: 'Calabacín', gramos: 40 }, { nombre: 'Pimiento rojo', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'salsa de soja', 'ajo en polvo'], tiempoPrep: '15 min (con marinado)', tiempoCoccion: '15 min', dificultad: 'Fácil', pasos: ['Marina y sella el tofu.', 'Saltea verduras.', 'Añade quinoa y sirve.'], consejo: 'Prensar el tofu mejora la textura.' },
+    'Heura con arroz integral': { ingredientes: [{ nombre: 'Heura', gramos: 130 }, { nombre: 'Arroz integral cocido', gramos: 180 }, { nombre: 'Pimiento rojo', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'pimentón ahumado'], tiempoPrep: '5 min', tiempoCoccion: '12 min', dificultad: 'Fácil', pasos: ['Saltea pimiento.', 'Añade heura y dora.', 'Sirve con arroz.'], consejo: 'Fuego medio-alto para que la heura se dore.' },
+    'Ensalada de alubias blancas con pepino y pimiento': { ingredientes: [{ nombre: 'Alubias / Judías blancas (cocidas)', gramos: 200 }, { nombre: 'Pepino', gramos: 80 }, { nombre: 'Pimiento verde', gramos: 50 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'vinagre', 'orégano'], tiempoPrep: '10 min', tiempoCoccion: '0 min (en frío)', dificultad: 'Fácil', pasos: ['Limpia y trocea verduras.', 'Mezcla con alubias y aliña.'], consejo: 'Ideal para preparar la noche anterior.' },
+    'Pisto de verduras con un huevo cuajado': { ingredientes: [{ nombre: 'Pisto de verduras', gramos: 220 }, { nombre: 'Huevo', gramos: 60 }, { nombre: 'Aceite de oliva', gramos: 6 }], extras: ['sal', 'pimienta'], tiempoPrep: '5 min', tiempoCoccion: '10 min', dificultad: 'Fácil', pasos: ['Calienta pisto.', 'Haz un hueco y añade el huevo.', 'Tapa y cuaja a fuego bajo.'], consejo: 'Tapar la sartén es la clave.' },
+    'Guisantes salteados con taquitos de jamón': { ingredientes: [{ nombre: 'Guisantes', gramos: 200 }, { nombre: 'Jamón serrano', gramos: 40 }, { nombre: 'Cebolla', gramos: 30 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta'], tiempoPrep: '5 min', tiempoCoccion: '12 min', dificultad: 'Fácil', pasos: ['Pocha cebolla.', 'Añade jamón y guisantes.', 'Saltea todo junto.'], consejo: 'Cuidado con la sal, el jamón ya es salado.' },
+    'Ensalada de pasta integral con atún y huevo duro': { ingredientes: [{ nombre: 'Pasta integral (cocida)', gramos: 180 }, { nombre: 'Atún en lata', gramos: 60 }, { nombre: 'Huevo', gramos: 55 }, { nombre: 'Tomate', gramos: 40 }, { nombre: 'Aceite de oliva', gramos: 8 }], extras: ['sal', 'pimienta', 'orégano'], tiempoPrep: '10 min', tiempoCoccion: '10-12 min (huevo y pasta)', dificultad: 'Fácil', pasos: ['Cuece pasta y huevo.', 'Mezcla con atún y tomate.', 'Aliña y sirve.'], consejo: 'Dejarla reposar en nevera mejora el sabor.' },
+};
+
+// Fecha en formato YYYY-MM-DD usando la ZONA HORARIA LOCAL del dispositivo.
+const fechaLocalStr = (d = new Date()) => {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+};
+
+const EMPTY_FORM = { alimento: '', peso: '100', fecha: fechaLocalStr() };
+
+// ============================================================
+// BASE DE DATOS INICIAL DE FÁBRICA
+// ============================================================
+const INITIAL_FOOD_DB = [
+    { nombre: 'Pechuga de pollo', alias: ['pechuga de pollo', 'pollo a la plancha', 'pechuga pollo', 'pollo plancha'], cal: 165, prot: 31, carb: 0, gras: 3.6, unidad: 150 },
+    { nombre: 'Muslo de pollo', alias: ['muslo de pollo', 'contramuslo de pollo', 'pollo muslo'], cal: 209, prot: 26, carb: 0, gras: 10.9, unidad: 120 },
+    { nombre: 'Pollo con piel', alias: ['pollo con piel', 'pollo asado', 'pollo al horno', 'pollo rostizado'], cal: 239, prot: 27, carb: 0, gras: 14, unidad: 150 },
+    { nombre: 'Pavo', alias: ['pavo', 'pechuga de pavo'], cal: 135, prot: 29, carb: 0, gras: 1.7, unidad: 150 },
+    { nombre: 'Ternera', alias: ['ternera', 'filete de ternera', 'carne de ternera', 'bistec', 'bisté', 'filete', 'carne roja'], cal: 172, prot: 26, carb: 0, gras: 7, unidad: 150 },
+    { nombre: 'Solomillo de cerdo', alias: ['solomillo de cerdo', 'lomo de cerdo', 'cerdo', 'filete de cerdo', 'lomo', 'solomillo'], cal: 143, prot: 26, carb: 0, gras: 4, unidad: 150 },
+    { nombre: 'Chuleta de cerdo', alias: ['chuleta de cerdo'], cal: 231, prot: 24, carb: 0, gras: 15, unidad: 150 },
+    { nombre: 'Cordero', alias: ['cordero', 'chuletas de cordero'], cal: 258, prot: 25, carb: 0, gras: 17, unidad: 150 },
+    { nombre: 'Hamburguesa de ternera', alias: ['hamburguesa de ternera', 'hamburguesa casera'], cal: 250, prot: 26, carb: 0, gras: 17, unidad: 120 },
+    { nombre: 'Carne picada de ternera', alias: ['carne picada de ternera', 'carne molida'], cal: 220, prot: 24, carb: 0, gras: 14, unidad: 100 },
+    { nombre: 'Carne roja genérica', alias: ['carne roja', 'filete', 'carne', 'bistec'], cal: 200, prot: 25, carb: 0, gras: 12, unidad: 150 },
+    { nombre: 'Salmón', alias: ['salmon', 'salmón'], cal: 208, prot: 20, carb: 0, gras: 13, unidad: 150 },
+    { nombre: 'Atún natural', alias: ['atun', 'atún', 'atun natural'], cal: 132, prot: 28, carb: 0, gras: 1.3, unidad: 150 },
+    { nombre: 'Atún en lata', alias: ['atun en lata', 'atún en lata', 'lata de atun'], cal: 180, prot: 26, carb: 0, gras: 8, unidad: 80 },
+    { nombre: 'Merluza', alias: ['merluza'], cal: 86, prot: 17.8, carb: 0, gras: 1.3, unidad: 150 },
+    { nombre: 'Bacalao', alias: ['bacalao'], cal: 82, prot: 18, carb: 0, gras: 0.7, unidad: 150 },
+    { nombre: 'Gambas', alias: ['gambas', 'camarones', 'langostinos'], cal: 99, prot: 24, carb: 0.2, gras: 0.3, unidad: 100 },
+    { nombre: 'Mejillones', alias: ['mejillones'], cal: 86, prot: 12, carb: 3.7, gras: 2.2, unidad: 100 },
+    { nombre: 'Calamares', alias: ['calamares'], cal: 92, prot: 15.6, carb: 3.1, gras: 1.4, unidad: 100 },
+    { nombre: 'Sardinas', alias: ['sardinas'], cal: 208, prot: 25, carb: 0, gras: 11.5, unidad: 100 },
+    { nombre: 'Pescado blanco genérico', alias: ['pescado blanco', 'pescado', 'lubina', 'dorada', 'besugo', 'rodaballo'], cal: 90, prot: 19, carb: 0, gras: 1.5, unidad: 150 },
+    { nombre: 'Huevo frito', alias: ['huevo frito', 'huevos fritos', 'huevo estrellado'], cal: 196, prot: 13.6, carb: 0.8, gras: 15.3, unidad: 60 },
+    { nombre: 'Huevo cocido', alias: ['huevo cocido', 'huevo duro', 'huevos cocidos', 'huevos duros'], cal: 155, prot: 12.6, carb: 1.1, gras: 10.6, unidad: 55 },
+    { nombre: 'Huevo revuelto', alias: ['huevo revuelto', 'huevos revueltos'], cal: 168, prot: 11.5, carb: 1.6, gras: 12.5, unidad: 60 },
+    { nombre: 'Tortilla francesa', alias: ['tortilla francesa'], cal: 154, prot: 10.8, carb: 0.8, gras: 11.7, unidad: 60 },
+    { nombre: 'Clara de huevo', alias: ['clara de huevo', 'claras de huevo'], cal: 52, prot: 10.9, carb: 0.7, gras: 0.2, unidad: 33 },
+    { nombre: 'Leche entera', alias: ['leche entera', 'vaso de leche', 'leche'], cal: 61, prot: 3.2, carb: 4.8, gras: 3.3, unidad: 240 },
+    { nombre: 'Leche desnatada', alias: ['leche desnatada', 'leche descremada'], cal: 35, prot: 3.4, carb: 5.0, gras: 0.1, unidad: 240 },
+    { nombre: 'Yogur natural', alias: ['yogur natural', 'yogurt natural'], cal: 61, prot: 3.5, carb: 4.7, gras: 3.3, unidad: 125 },
+    { nombre: 'Yogur griego', alias: ['yogur griego', 'yogurt griego'], cal: 97, prot: 9, carb: 3.6, gras: 5, unidad: 150 },
+    { nombre: 'Queso fresco', alias: ['queso fresco', 'queso batido'], cal: 98, prot: 11, carb: 3.4, gras: 4.3, unidad: 30 },
+    { nombre: 'Queso manchego', alias: ['queso manchego', 'queso curado'], cal: 400, prot: 26, carb: 1.3, gras: 33, unidad: 30 },
+    { nombre: 'Lentejas cocidas', alias: ['lentejas', 'lentejas cocidas'], cal: 116, prot: 9, carb: 20, gras: 0.4, unidad: 200 },
+    { nombre: 'Garbanzos cocidos', alias: ['garbanzos', 'garbanzos cocidos'], cal: 164, prot: 8.9, carb: 27, gras: 2.6, unidad: 200 },
+    { nombre: 'Judías / alubias cocidas', alias: ['judias', 'alubias', 'judías', 'frijoles'], cal: 127, prot: 8.7, carb: 22.8, gras: 0.5, unidad: 200 },
+    { nombre: 'Guisantes', alias: ['guisantes'], cal: 81, prot: 5.4, carb: 14, gras: 0.4, unidad: 100 },
+    { nombre: 'Hummus', alias: ['hummus'], cal: 166, prot: 8, carb: 14, gras: 9.6, unidad: 50 },
+    { nombre: 'Tofu', alias: ['tofu'], cal: 76, prot: 8, carb: 1.9, gras: 4.8, unidad: 100 },
+    { nombre: 'Arroz blanco cocido', alias: ['arroz', 'arroz blanco', 'arroz cocido'], cal: 130, prot: 2.7, carb: 28, gras: 0.3, unidad: 150 },
+    { nombre: 'Pasta cocida', alias: ['pasta', 'espaguetis', 'macarrones', 'pasta cocida'], cal: 131, prot: 5, carb: 25, gras: 1.1, unidad: 150 },
+    { nombre: 'Pan blanco', alias: ['pan blanco', 'pan', 'rebanada de pan'], cal: 265, prot: 9, carb: 49, gras: 3.2, unidad: 30 },
+    { nombre: 'Pan integral', alias: ['pan integral'], cal: 247, prot: 13, carb: 41, gras: 3.4, unidad: 30 },
+    { nombre: 'Avena', alias: ['avena', 'copos de avena'], cal: 389, prot: 16.9, carb: 66, gras: 6.9, unidad: 40 },
+    { nombre: 'Cereales de desayuno', alias: ['cereales de desayuno', 'cereales'], cal: 378, prot: 7, carb: 84, gras: 1.5, unidad: 40 },
+    { nombre: 'Quinoa cocida', alias: ['quinoa', 'quinoa cocida'], cal: 120, prot: 4.4, carb: 21.3, gras: 1.9, unidad: 150 },
+    { nombre: 'Patata cocida', alias: ['patata cocida', 'patata hervida', 'papa cocida', 'papa hervida', 'papas cocidas', 'papas hervidas', 'papas guisadas'], cal: 87, prot: 1.9, carb: 20, gras: 0.1, unidad: 150 },
+    { nombre: 'Patatas fritas', alias: ['patatas fritas', 'papas fritas', 'patata frita', 'papa frita'], cal: 312, prot: 3.4, carb: 41, gras: 15, unidad: 150 },
+    { nombre: 'Patata asada', alias: ['patata asada', 'papa asada', 'papas asadas', 'patatas asadas'], cal: 93, prot: 2.1, carb: 21, gras: 0.1, unidad: 150 },
+    { nombre: 'Puré de patatas', alias: ['pure de patatas', 'pure de papas', 'puré de patatas', 'puré de papas'], cal: 113, prot: 2, carb: 16, gras: 4.2, unidad: 150 },
+    { nombre: 'Tomate', alias: ['tomate'], cal: 18, prot: 0.9, carb: 3.9, gras: 0.2, unidad: 120 },
+    { nombre: 'Lechuga', alias: ['lechuga'], cal: 15, prot: 1.4, carb: 2.9, gras: 0.2, unidad: 50 },
+    { nombre: 'Zanahoria', alias: ['zanahoria'], cal: 41, prot: 0.9, carb: 10, gras: 0.2, unidad: 80 },
+    { nombre: 'Pepino', alias: ['pepino'], cal: 15, prot: 0.7, carb: 3.6, gras: 0.1, unidad: 120 },
+    { nombre: 'Cebolla', alias: ['cebolla'], cal: 40, prot: 1.1, carb: 9.3, gras: 0.1, unidad: 100 },
+    { nombre: 'Pimiento', alias: ['pimiento'], cal: 31, prot: 1, carb: 6, gras: 0.3, unidad: 100 },
+    { nombre: 'Brócoli', alias: ['brocoli', 'brócoli'], cal: 34, prot: 2.8, carb: 6.6, gras: 0.4, unidad: 100 },
+    { nombre: 'Espinacas', alias: ['espinacas'], cal: 23, prot: 2.9, carb: 3.6, gras: 0.4, unidad: 100 },
+    { nombre: 'Calabacín', alias: ['calabacin', 'calabacín'], cal: 17, prot: 1.2, carb: 3.1, gras: 0.3, unidad: 150 },
+    { nombre: 'Champiñones', alias: ['champiñones', 'setas'], cal: 22, prot: 3.1, carb: 3.3, gras: 0.3, unidad: 80 },
+    { nombre: 'Aguacate', alias: ['aguacate', 'palta'], cal: 160, prot: 2, carb: 8.5, gras: 14.7, unidad: 150 },
+    { nombre: 'Verduras variadas', alias: ['verduras', 'verdura', 'menestra'], cal: 30, prot: 1.5, carb: 5, gras: 0.2, unidad: 150 },
+    { nombre: 'Manzana', alias: ['manzana'], cal: 52, prot: 0.3, carb: 14, gras: 0.2, unidad: 150 },
+    { nombre: 'Plátano', alias: ['platano', 'plátano', 'banana'], cal: 89, prot: 1.1, carb: 23, gras: 0.3, unidad: 120 },
+    { nombre: 'Naranja', alias: ['naranja'], cal: 47, prot: 0.9, carb: 12, gras: 0.1, unidad: 150 },
+    { nombre: 'Pera', alias: ['pera'], cal: 57, prot: 0.4, carb: 15, gras: 0.1, unidad: 150 },
+    { nombre: 'Fresas', alias: ['fresas', 'fresa'], cal: 32, prot: 0.7, carb: 7.7, gras: 0.3, unidad: 100 },
+    { nombre: 'Uvas', alias: ['uvas'], cal: 69, prot: 0.7, carb: 18, gras: 0.2, unidad: 100 },
+    { nombre: 'Sandía', alias: ['sandia', 'sandía'], cal: 30, prot: 0.6, carb: 7.6, gras: 0.2, unidad: 200 },
+    { nombre: 'Melón', alias: ['melon', 'melón'], cal: 34, prot: 0.8, carb: 8.2, gras: 0.2, unidad: 200 },
+    { nombre: 'Piña', alias: ['piña', 'pina'], cal: 50, prot: 0.5, carb: 13, gras: 0.1, unidad: 150 },
+    { nombre: 'Kiwi', alias: ['kiwi'], cal: 61, prot: 1.1, carb: 15, gras: 0.5, unidad: 75 },
+    { nombre: 'Mango', alias: ['mango'], cal: 60, prot: 0.8, carb: 15, gras: 0.4, unidad: 150 },
+    { nombre: 'Fruta variada', alias: ['fruta', 'frutas'], cal: 50, prot: 0.5, carb: 12, gras: 0.2, unidad: 150 },
+    { nombre: 'Almendras', alias: ['almendras'], cal: 579, prot: 21, carb: 22, gras: 50, unidad: 30 },
+    { nombre: 'Nueces', alias: ['nueces'], cal: 654, prot: 15, carb: 14, gras: 65, unidad: 30 },
+    { nombre: 'Cacahuetes', alias: ['cacahuetes', 'mani', 'maní'], cal: 567, prot: 25.8, carb: 16, gras: 49, unidad: 30 },
+    { nombre: 'Pistachos', alias: ['pistachos'], cal: 560, prot: 20, carb: 28, gras: 45, unidad: 30 },
+    { nombre: 'Chocolate con leche', alias: ['chocolate', 'chocolate con leche'], cal: 535, prot: 7.6, carb: 59, gras: 30, unidad: 25 },
+    { nombre: 'Galletas', alias: ['galletas'], cal: 480, prot: 6, carb: 65, gras: 21, unidad: 25 },
+    { nombre: 'Helado', alias: ['helado'], cal: 207, prot: 3.5, carb: 24, gras: 11, unidad: 100 },
+    { nombre: 'Azúcar', alias: ['azucar', 'azúcar'], cal: 387, prot: 0, carb: 100, gras: 0, unidad: 10 },
+    { nombre: 'Miel', alias: ['miel'], cal: 304, prot: 0.3, carb: 82, gras: 0, unidad: 20 },
+    { nombre: 'Refresco de cola', alias: ['refresco de cola', 'coca cola', 'cola'], cal: 42, prot: 0, carb: 10.6, gras: 0, unidad: 330 },
+    { nombre: 'Cerveza', alias: ['cerveza'], cal: 43, prot: 0.5, carb: 3.6, gras: 0, unidad: 330 },
+    { nombre: 'Vino tinto', alias: ['vino tinto', 'vino'], cal: 85, prot: 0.1, carb: 2.6, gras: 0, unidad: 150 },
+    { nombre: 'Zumo de naranja', alias: ['zumo de naranja', 'jugo de naranja'], cal: 45, prot: 0.7, carb: 10.4, gras: 0.2, unidad: 200 },
+    { nombre: 'Café con leche', alias: ['cafe con leche', 'café con leche'], cal: 42, prot: 2.1, carb: 4.2, gras: 1.8, unidad: 200 },
+    { nombre: 'Pizza', alias: ['pizza'], cal: 266, prot: 11, carb: 33, gras: 10, unidad: 150 },
+    { nombre: 'Hamburguesa completa', alias: ['hamburguesa completa', 'hamburguesa con pan'], cal: 295, prot: 17, carb: 24, gras: 14, unidad: 220 },
+    { nombre: 'Perrito caliente', alias: ['perrito caliente', 'hot dog'], cal: 290, prot: 10.5, carb: 24, gras: 17, unidad: 150 },
+    { nombre: 'Sushi variado', alias: ['sushi'], cal: 150, prot: 6, carb: 27, gras: 1.5, unidad: 200 },
+    { nombre: 'Aceite de oliva', alias: ['aceite de oliva', 'aceite'], cal: 884, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Mayonesa', alias: ['mayonesa'], cal: 680, prot: 1, carb: 2.6, gras: 75, unidad: 15 },
+    { nombre: 'Kétchup', alias: ['ketchup', 'kétchup'], cal: 112, prot: 1.2, carb: 27, gras: 0.1, unidad: 15 },
+    { nombre: 'Aceite de girasol', alias: ['aceite de girasol'], cal: 900, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Aceite de coco', alias: ['aceite de coco'], cal: 862, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Aceite de sésamo', alias: ['aceite de sésamo', 'aceite de sesamo'], cal: 884, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Aceite de aguacate', alias: ['aceite de aguacate'], cal: 884, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Manteca de cerdo', alias: ['manteca de cerdo'], cal: 900, prot: 0, carb: 0, gras: 100, unidad: 10 },
+    { nombre: 'Mantequilla clarificada (Ghee)', alias: ['mantequilla clarificada (ghee)', 'ghee'], cal: 898, prot: 0.3, carb: 0, gras: 99.5, unidad: 10 },
+    { nombre: 'Aceitunas verdes', alias: ['aceitunas verdes'], cal: 145, prot: 1, carb: 1, gras: 15, unidad: 30 },
+    { nombre: 'Aceitunas negras', alias: ['aceitunas negras'], cal: 232, prot: 1.6, carb: 3, gras: 23, unidad: 30 },
+    { nombre: 'Azúcar moreno', alias: ['azúcar moreno'], cal: 380, prot: 0, carb: 97, gras: 0, unidad: 10 },
+    { nombre: 'Miel de palma', alias: ['miel de palma', 'miel de palma canaria'], cal: 285, prot: 0.4, carb: 70, gras: 0.1, unidad: 20 },
+    { nombre: 'Agua', alias: ['agua'], cal: 0, prot: 0, carb: 0, gras: 0, unidad: 250 },
+    { nombre: 'Café solo', alias: ['café solo', 'cafe solo', 'cafe', 'expreso', 'cafe negro'], cal: 2, prot: 0.1, carb: 0, gras: 0, unidad: 50 },
+    { nombre: 'Té', alias: ['té', 'te'], cal: 1, prot: 0, carb: 0.2, gras: 0, unidad: 200 },
+    { nombre: 'Vino blanco', alias: ['vino blanco'], cal: 82, prot: 0.1, carb: 2.5, gras: 0, unidad: 150 },
+    { nombre: 'Cerveza sin alcohol', alias: ['cerveza sin alcohol'], cal: 25, prot: 0.3, carb: 5.5, gras: 0, unidad: 330 },
+    { nombre: 'Galletas María', alias: ['galletas maría', 'galletas maria'], cal: 432, prot: 7.5, carb: 74, gras: 11, unidad: 25 },
+    { nombre: 'Caldo de pollo', alias: ['caldo de pollo'], cal: 15, prot: 1.5, carb: 1, gras: 0.5, unidad: 250 },
+    { nombre: 'Caldo de verduras', alias: ['caldo de verduras'], cal: 12, prot: 0.8, carb: 1.8, gras: 0.3, unidad: 250 },
+    { nombre: 'Carne picada mixta', alias: ['carne picada mixta', 'carne picada mixta cerdo y res', 'carne picada de cerdo y ternera'], cal: 215, prot: 17, carb: 0, gras: 16, unidad: 100 },
+    { nombre: 'Muslo de pavo', alias: ['muslo de pavo'], cal: 136, prot: 22, carb: 0, gras: 4.5, unidad: 150 },
+    { nombre: 'Conejo', alias: ['conejo'], cal: 133, prot: 23, carb: 0, gras: 4.5, unidad: 150 },
+    { nombre: 'Pato', alias: ['pato'], cal: 337, prot: 19, carb: 0, gras: 28, unidad: 150 },
+    { nombre: 'Costillas de cerdo', alias: ['costillas de cerdo', 'costillas', 'costilla de cerdo'], cal: 315, prot: 16.5, carb: 0, gras: 28, unidad: 200 },
+    { nombre: 'Panceta de cerdo', alias: ['panceta de cerdo', 'panceta', 'bacon', 'tocino'], cal: 522, prot: 14, carb: 0, gras: 51, unidad: 50 },
+    { nombre: 'Carne de cabra', alias: ['carne de cabra'], cal: 110, prot: 21, carb: 0, gras: 3, unidad: 150 },
+    { nombre: 'Solomillo de res', alias: ['solomillo de res', 'solomillo de ternera'], cal: 135, prot: 23, carb: 0, gras: 4.5, unidad: 150 },
+    { nombre: 'Entrecot de res', alias: ['entrecot de res', 'entrecot', 'entrecot de ternera'], cal: 195, prot: 21, carb: 0, gras: 12, unidad: 200 },
+    { nombre: 'Codorniz', alias: ['codorniz'], cal: 134, prot: 22.8, carb: 0, gras: 4.5, unidad: 120 },
+    { nombre: 'Jabalí', alias: ['jabalí', 'jabali'], cal: 122, prot: 21.5, carb: 0, gras: 3.3, unidad: 150 },
+    { nombre: 'Perdiz', alias: ['perdiz'], cal: 106, prot: 22.5, carb: 0, gras: 1.8, unidad: 150 },
+    { nombre: 'Lomo embuchado', alias: ['lomo embuchado'], cal: 290, prot: 39, carb: 1, gras: 12, unidad: 30 },
+    { nombre: 'Cecina de vaca', alias: ['cecina de vaca', 'cecina'], cal: 247, prot: 39, carb: 0, gras: 9.5, unidad: 30 },
+    { nombre: 'Pechuga de pollo en lonchas', alias: ['pechuga de pollo en lonchas', 'pechuga de pollo fiambre', 'fiambre de pollo'], cal: 85, prot: 16, carb: 1.5, gras: 1.5, unidad: 30 },
+    { nombre: 'Arroz blanco crudo', alias: ['arroz blanco crudo', 'arroz crudo'], cal: 350, prot: 6.7, carb: 78, gras: 0.6, unidad: 80 },
+    { nombre: 'Arroz integral cocido', alias: ['arroz integral cocido', 'arroz integral'], cal: 111, prot: 2.6, carb: 23, gras: 0.9, unidad: 150 },
+    { nombre: 'Pasta blanca cruda', alias: ['pasta blanca cruda', 'pasta cruda'], cal: 359, prot: 12, carb: 72, gras: 1.5, unidad: 80 },
+    { nombre: 'Pasta integral cocida', alias: ['pasta integral cocida', 'pasta integral'], cal: 124, prot: 5.3, carb: 26, gras: 0.8, unidad: 150 },
+    { nombre: 'Trigo sarraceno', alias: ['trigo sarraceno'], cal: 343, prot: 13.3, carb: 71.5, gras: 3.4, unidad: 80 },
+    { nombre: 'Cuscús cocido', alias: ['cuscús cocido', 'cuscus cocido', 'cuscus', 'couscous'], cal: 112, prot: 3.8, carb: 23, gras: 0.2, unidad: 150 },
+    { nombre: 'Copos de maíz', alias: ['copos de maíz', 'corn flakes', 'copos de maiz'], cal: 357, prot: 7.5, carb: 84, gras: 0.9, unidad: 40 },
+    { nombre: 'Bulgur', alias: ['bulgur'], cal: 342, prot: 12.3, carb: 76, gras: 1.3, unidad: 80 },
+    { nombre: 'Polenta', alias: ['polenta', 'semola de maiz'], cal: 360, prot: 8, carb: 78, gras: 1, unidad: 150 },
+    { nombre: 'Amaranto', alias: ['amaranto'], cal: 371, prot: 13.6, carb: 65.2, gras: 7, unidad: 80 },
+    { nombre: 'Mijo', alias: ['mijo'], cal: 378, prot: 11, carb: 73, gras: 4.2, unidad: 80 },
+    { nombre: 'Espelta', alias: ['espelta'], cal: 338, prot: 14.6, carb: 70, gras: 2.4, unidad: 80 },
+    { nombre: 'Centeno', alias: ['centeno'], cal: 338, prot: 10.3, carb: 75.9, gras: 1.6, unidad: 80 },
+    { nombre: 'Pan de centeno', alias: ['pan de centeno'], cal: 259, prot: 8.5, carb: 48, gras: 3.3, unidad: 30 },
+    { nombre: 'Pan de masa madre', alias: ['pan de masa madre'], cal: 289, prot: 11, carb: 56, gras: 1.8, unidad: 30 },
+    { nombre: 'Pan de pita', alias: ['pan de pita', 'pan pita'], cal: 275, prot: 9, carb: 55, gras: 1.2, unidad: 60 },
+    { nombre: 'Tortitas de arroz', alias: ['tortitas de arroz', 'tortita de arroz'], cal: 385, prot: 8.2, carb: 81, gras: 2.8, unidad: 10 },
+    { nombre: 'Tortitas de maíz', alias: ['tortitas de maíz', 'tortita de maiz'], cal: 387, prot: 7.5, carb: 82, gras: 2.5, unidad: 10 },
+    { nombre: 'Fideos de arroz', alias: ['fideos de arroz'], cal: 364, prot: 3.5, carb: 80, gras: 0.2, unidad: 150 },
+    { nombre: 'Fideos soba', alias: ['fideos soba', 'soba'], cal: 336, prot: 14.4, carb: 74.5, gras: 0.7, unidad: 150 },
+    { nombre: 'Gnocchi', alias: ['gnocchi', 'ñoquis', 'noquis de patata'], cal: 160, prot: 4, carb: 34, gras: 0.5, unidad: 200 },
+    { nombre: 'Boniato asado', alias: ['boniato asado', 'batata asada'], cal: 90, prot: 2, carb: 21, gras: 0.2, unidad: 150 },
+    { nombre: 'Vinagre de vino', alias: ['vinagre de vino'], cal: 19, prot: 0.1, carb: 0.7, gras: 0, unidad: 10 },
+    { nombre: 'Vinagre balsámico', alias: ['vinagre balsámico', 'vinagre balsamico'], cal: 88, prot: 0.5, carb: 17, gras: 0, unidad: 10 },
+    { nombre: 'Mermelada', alias: ['mermelada'], cal: 250, prot: 0.4, carb: 62, gras: 0.1, unidad: 20 },
+    { nombre: 'Chocolate negro 70%', alias: ['chocolate negro 70%', 'chocolate negro', 'chocolate 70'], cal: 598, prot: 7.8, carb: 30, gras: 43, unidad: 25 },
+    { nombre: 'Cacao en polvo soluble', alias: ['cacao en polvo soluble', 'cacao soluble', 'cola cao', 'nesquik'], cal: 385, prot: 5, carb: 78, gras: 4.5, unidad: 15 },
+    { nombre: 'Jamón serrano', alias: ['jamón serrano', 'jamon serrano'], cal: 241, prot: 30, carb: 0.5, gras: 13, unidad: 30 },
+    { nombre: 'Jamón cocido', alias: ['jamón cocido', 'jamon cocido', 'jamon york', 'jamon de york'], cal: 107, prot: 17, carb: 1, gras: 4, unidad: 30 },
+    { nombre: 'Pavo fiambre en lonchas', alias: ['pavo fiambre en lonchas', 'pavo fiambre', 'fiambre de pavo'], cal: 98, prot: 18, carb: 1.5, gras: 2, unidad: 30 },
+    { nombre: 'Chorizo', alias: ['chorizo'], cal: 455, prot: 22, carb: 1.5, gras: 40, unidad: 30 },
+    { nombre: 'Salchichón', alias: ['salchichón', 'salchichon'], cal: 395, prot: 24, carb: 1, gras: 34, unidad: 30 },
+    { nombre: 'Morcilla', alias: ['morcilla'], cal: 285, prot: 13, carb: 4, gras: 24, unidad: 50 },
+    { nombre: 'Salchicha fresca', alias: ['salchicha fresca', 'salchicha'], cal: 260, prot: 14, carb: 1, gras: 22, unidad: 60 },
+    { nombre: 'Mortadela', alias: ['mortadela'], cal: 311, prot: 12, carb: 2.5, gras: 28, unidad: 30 },
+    { nombre: 'Salami', alias: ['salami'], cal: 336, prot: 21, carb: 1, gras: 28, unidad: 30 },
+    { nombre: 'Sobrasada', alias: ['sobrasada'], cal: 590, prot: 13, carb: 2, gras: 60, unidad: 30 },
+    { nombre: 'Bresaola', alias: ['bresaola'], cal: 175, prot: 33, carb: 0, gras: 2, unidad: 30 },
+    { nombre: 'Pastrami de ternera', alias: ['pastrami de ternera', 'pastrami'], cal: 147, prot: 22, carb: 0.5, gras: 6, unidad: 30 },
+    { nombre: 'Mandarina', alias: ['mandarina'], cal: 53, prot: 0.8, carb: 13.3, gras: 0.3, unidad: 70 },
+    { nombre: 'Limón', alias: ['limón', 'limon'], cal: 29, prot: 1.1, carb: 9.3, gras: 0.3, unidad: 60 },
+    { nombre: 'Pomelo', alias: ['pomelo'], cal: 42, prot: 0.8, carb: 10.7, gras: 0.1, unidad: 200 },
+    { nombre: 'Papaya', alias: ['papaya'], cal: 43, prot: 0.5, carb: 11, gras: 0.3, unidad: 200 },
+    { nombre: 'Tuno indio', alias: ['tuno indio', 'higo chumbo', 'tuna'], cal: 41, prot: 0.7, carb: 9.6, gras: 0.5, unidad: 90 },
+    { nombre: 'Cereza', alias: ['cereza', 'cerezas'], cal: 50, prot: 1, carb: 12, gras: 0.3, unidad: 100 },
+    { nombre: 'Ciruela', alias: ['ciruela', 'ciruelas'], cal: 46, prot: 0.7, carb: 11.4, gras: 0.3, unidad: 70 },
+    { nombre: 'Melocotón', alias: ['melocotón', 'melocoton'], cal: 39, prot: 0.9, carb: 9.5, gras: 0.3, unidad: 150 },
+    { nombre: 'Nectarina', alias: ['nectarina'], cal: 44, prot: 1.1, carb: 10.6, gras: 0.3, unidad: 140 },
+    { nombre: 'Albaricoque', alias: ['albaricoque', 'albaricoques'], cal: 48, prot: 1.4, carb: 11.1, gras: 0.4, unidad: 60 },
+    { nombre: 'Granada', alias: ['granada'], cal: 83, prot: 1.7, carb: 18.7, gras: 1.2, unidad: 200 },
+    { nombre: 'Higo', alias: ['higo', 'higos', 'higo fresco'], cal: 74, prot: 0.8, carb: 19.2, gras: 0.3, unidad: 60 },
+    { nombre: 'Chirimoya', alias: ['chirimoya'], cal: 75, prot: 1.6, carb: 17.7, gras: 0.6, unidad: 200 },
+    { nombre: 'Caqui', alias: ['caqui'], cal: 70, prot: 0.6, carb: 18.6, gras: 0.2, unidad: 150 },
+    { nombre: 'Níspero', alias: ['níspero', 'nispero', 'nisperos'], cal: 47, prot: 0.4, carb: 12.1, gras: 0.2, unidad: 40 },
+    { nombre: 'Frambuesa', alias: ['frambuesa', 'frambuesas'], cal: 52, prot: 1.2, carb: 11.9, gras: 0.65, unidad: 100 },
+    { nombre: 'Arándano', alias: ['arándano', 'arandanos', 'arandano'], cal: 57, prot: 0.7, carb: 14.5, gras: 0.3, unidad: 100 },
+    { nombre: 'Mora', alias: ['mora', 'moras'], cal: 43, prot: 1.4, carb: 9.6, gras: 0.5, unidad: 100 },
+    { nombre: 'Maracuyá', alias: ['maracuyá', 'maracuya', 'fruta de la pasion'], cal: 97, prot: 2.2, carb: 23.4, gras: 0.7, unidad: 60 },
+    { nombre: 'Guayaba', alias: ['guayaba'], cal: 68, prot: 2.6, carb: 14.3, gras: 1, unidad: 100 },
+    { nombre: 'Lichi', alias: ['lichi', 'lichis'], cal: 66, prot: 0.8, carb: 16.5, gras: 0.4, unidad: 100 },
+    { nombre: 'Coco fresco', alias: ['coco fresco', 'coco'], cal: 354, prot: 3.3, carb: 15.2, gras: 33.5, unidad: 40 },
+    { nombre: 'Pitaya', alias: ['pitaya', 'fruta del dragon'], cal: 60, prot: 1.2, carb: 13, gras: 0.4, unidad: 150 },
+    { nombre: 'Tamarindo', alias: ['tamarindo'], cal: 239, prot: 2.8, carb: 62.5, gras: 0.6, unidad: 30 },
+    { nombre: 'Grosella roja', alias: ['grosella roja', 'grosella'], cal: 56, prot: 1.4, carb: 13.8, gras: 0.2, unidad: 60 },
+    { nombre: 'Dátil', alias: ['dátil', 'datil', 'datiles'], cal: 282, prot: 2.5, carb: 75, gras: 0.4, unidad: 30 },
+    { nombre: 'Pasa', alias: ['pasa', 'pasas', 'pasas de uva'], cal: 299, prot: 3.1, carb: 79, gras: 0.5, unidad: 30 },
+    { nombre: 'Orejón de albaricoque', alias: ['orejón de albaricoque', 'orejones'], cal: 241, prot: 3.4, carb: 62.6, gras: 0.5, unidad: 30 },
+    { nombre: 'Ciruela pasa', alias: ['ciruela pasa', 'ciruelas pasas'], cal: 240, prot: 2.2, carb: 63.9, gras: 0.4, unidad: 30 },
+    { nombre: 'Higo seco', alias: ['higo seco', 'higos secos'], cal: 249, prot: 3.3, carb: 63.9, gras: 0.9, unidad: 30 },
+    { nombre: 'Mango deshidratado', alias: ['mango deshidratado', 'mango deshidratado sin azucar'], cal: 314, prot: 2.5, carb: 78, gras: 0.8, unidad: 30 },
+    { nombre: 'Castaña', alias: ['castaña', 'castañas', 'castana'], cal: 196, prot: 2.6, carb: 42, gras: 2, unidad: 30 },
+    { nombre: 'Anacardo', alias: ['anacardo', 'anacardos'], cal: 553, prot: 18, carb: 30, gras: 44, unidad: 30 },
+    { nombre: 'Avellana', alias: ['avellana', 'avellanas'], cal: 628, prot: 15, carb: 17, gras: 61, unidad: 30 },
+    { nombre: 'Nueces de Macadamia', alias: ['nueces de macadamia', 'macadamia'], cal: 718, prot: 8, carb: 14, gras: 76, unidad: 30 },
+    { nombre: 'Nueces de Pecán', alias: ['nueces de pecán', 'pecan', 'nuez pecana'], cal: 691, prot: 9, carb: 14, gras: 72, unidad: 30 },
+    { nombre: 'Nueces de Brasil', alias: ['nueces de brasil', 'nuez de brasil', 'coquitos'], cal: 659, prot: 14, carb: 12, gras: 67, unidad: 30 },
+    { nombre: 'Piñones', alias: ['piñones', 'piñon'], cal: 673, prot: 14, carb: 13, gras: 68, unidad: 20 },
+    { nombre: 'Semillas de chía', alias: ['semillas de chía', 'chia', 'semillas de chia'], cal: 486, prot: 16.5, carb: 42.1, gras: 30.7, unidad: 15 },
+    { nombre: 'Semillas de lino', alias: ['semillas de lino', 'lino', 'linaza'], cal: 534, prot: 18.3, carb: 28.9, gras: 42.2, unidad: 15 },
+    { nombre: 'Semillas de sésamo', alias: ['semillas de sésamo', 'sesamo', 'ajonjoli'], cal: 573, prot: 18, carb: 23, gras: 50, unidad: 15 },
+    { nombre: 'Semillas de cáñamo', alias: ['semillas de cáñamo', 'canamo', 'semillas de canamo'], cal: 553, prot: 31, carb: 9, gras: 49, unidad: 15 },
+    { nombre: 'Semillas de amapola', alias: ['semillas de amapola', 'amapola'], cal: 525, prot: 18, carb: 28, gras: 42, unidad: 10 },
+    { nombre: 'Pipas de girasol', alias: ['pipas de girasol', 'pipas', 'pipa de girasol'], cal: 584, prot: 20.8, carb: 20, gras: 51.5, unidad: 30 },
+    { nombre: 'Pipas de calabaza', alias: ['pipas de calabaza', 'pipa de calabaza'], cal: 559, prot: 30, carb: 10.7, gras: 49, unidad: 30 },
+    { nombre: 'Gofio de trigo', alias: ['gofio de trigo', 'gofio'], cal: 360, prot: 11, carb: 72, gras: 2.5, unidad: 40 },
+    { nombre: 'Gofio de millo', alias: ['gofio de millo', 'gofio de maiz', 'gofio millo'], cal: 355, prot: 8, carb: 75, gras: 2, unidad: 40 },
+    { nombre: 'Gofio multicereal', alias: ['gofio multicereal'], cal: 358, prot: 10, carb: 73, gras: 2.3, unidad: 40 },
+    { nombre: 'Harina de trigo', alias: ['harina de trigo', 'harina'], cal: 364, prot: 10.3, carb: 76, gras: 1, unidad: 30 },
+    { nombre: 'Harina de maíz', alias: ['harina de maíz', 'harina de maiz'], cal: 370, prot: 7.2, carb: 74, gras: 3.9, unidad: 30 },
+    { nombre: 'Maicena', alias: ['maicena', 'fecula de maiz'], cal: 381, prot: 0.3, carb: 91, gras: 0.1, unidad: 15 },
+    { nombre: 'Berenjena', alias: ['berenjena', 'berenjenas'], cal: 25, prot: 1, carb: 6, gras: 0.2, unidad: 150 },
+    { nombre: 'Ajo', alias: ['ajo', 'diente de ajo', 'ajos'], cal: 149, prot: 6.4, carb: 33, gras: 0.5, unidad: 5 },
+    { nombre: 'Apio', alias: ['apio'], cal: 16, prot: 0.7, carb: 3, gras: 0.2, unidad: 60 },
+    { nombre: 'Rabanito', alias: ['rabanito', 'rabano', 'rabanitos'], cal: 16, prot: 0.7, carb: 3.4, gras: 0.1, unidad: 50 },
+    { nombre: 'Hinojo', alias: ['hinojo'], cal: 31, prot: 1.2, carb: 7.3, gras: 0.2, unidad: 100 },
+    { nombre: 'Remolacha', alias: ['remolacha'], cal: 43, prot: 1.6, carb: 9.6, gras: 0.2, unidad: 100 },
+    { nombre: 'Calabaza', alias: ['calabaza'], cal: 26, prot: 1, carb: 6.5, gras: 0.1, unidad: 150 },
+    { nombre: 'Puerro', alias: ['puerro', 'puerros'], cal: 61, prot: 1.5, carb: 14, gras: 0.3, unidad: 100 },
+    { nombre: 'Chirivía', alias: ['chirivía', 'chirivia'], cal: 75, prot: 1.2, carb: 18, gras: 0.3, unidad: 100 },
+    { nombre: 'Colinabo', alias: ['colinabo'], cal: 27, prot: 1.4, carb: 6.2, gras: 0.1, unidad: 100 },
+    { nombre: 'Rábano blanco', alias: ['rábano blanco', 'daikon', 'rabano blanco'], cal: 18, prot: 0.6, carb: 4.1, gras: 0.1, unidad: 100 },
+    { nombre: 'Setas Shiitake', alias: ['setas shiitake', 'shiitake'], cal: 34, prot: 2.2, carb: 6.8, gras: 0.5, unidad: 80 },
+    { nombre: 'Champiñón Portobello', alias: ['champiñón portobello', 'portobello'], cal: 22, prot: 2.1, carb: 3.9, gras: 0.3, unidad: 100 },
+    { nombre: 'Corazones de palmito', alias: ['corazones de palmito', 'palmito'], cal: 36, prot: 2.5, carb: 4.6, gras: 0.6, unidad: 100 },
+    { nombre: 'Espárragos verdes', alias: ['espárragos verdes', 'esparragos', 'esparragos trigueros'], cal: 20, prot: 2.2, carb: 3.9, gras: 0.1, unidad: 100 },
+    { nombre: 'Rúcula', alias: ['rúcula', 'rucula'], cal: 25, prot: 2.6, carb: 3.7, gras: 0.7, unidad: 40 },
+    { nombre: 'Kale', alias: ['kale', 'col rizada'], cal: 49, prot: 4.3, carb: 8.8, gras: 0.9, unidad: 60 },
+    { nombre: 'Coles de Bruselas', alias: ['coles de bruselas'], cal: 43, prot: 3.4, carb: 9, gras: 0.3, unidad: 100 },
+    { nombre: 'Canónigos', alias: ['canónigos', 'canonigos'], cal: 21, prot: 2, carb: 2, gras: 0.4, unidad: 50 },
+    { nombre: 'Alga Wakame', alias: ['alga wakame', 'wakame'], cal: 45, prot: 3, carb: 9.1, gras: 0.6, unidad: 20 },
+    { nombre: 'Alga Nori', alias: ['alga nori', 'nori'], cal: 350, prot: 46, carb: 44, gras: 2.8, unidad: 3 },
+    { nombre: 'Endibia', alias: ['endibia'], cal: 17, prot: 1.2, carb: 3.3, gras: 0.2, unidad: 80 },
+    { nombre: 'Yema de huevo', alias: ['yema de huevo', 'yema'], cal: 322, prot: 16, carb: 0.6, gras: 27, unidad: 17 },
+    { nombre: 'Alubias pintas cocidas', alias: ['alubias pintas cocidas', 'alubias pintas'], cal: 140, prot: 9, carb: 25, gras: 0.6, unidad: 200 },
+    { nombre: 'Soja cocida', alias: ['soja cocida', 'soja'], cal: 172, prot: 16.6, carb: 9.9, gras: 9, unidad: 150 },
+    { nombre: 'Guisantes secos cocidos', alias: ['guisantes secos cocidos'], cal: 118, prot: 8.3, carb: 21, gras: 0.6, unidad: 150 },
+    { nombre: 'Judías verdes', alias: ['judías verdes', 'ejotes', 'vainitas'], cal: 31, prot: 1.8, carb: 7, gras: 0.1, unidad: 150 },
+    { nombre: 'Altramuces', alias: ['altramuces', 'chochos', 'altramuces en salmuera'], cal: 119, prot: 15.6, carb: 9.9, gras: 2.4, unidad: 100 },
+    { nombre: 'Edamame', alias: ['edamame', 'edamame cocido'], cal: 121, prot: 11.9, carb: 8.9, gras: 5.2, unidad: 100 },
+    { nombre: 'Habas frescas', alias: ['habas frescas', 'habas'], cal: 88, prot: 8, carb: 17.6, gras: 0.7, unidad: 150 },
+    { nombre: 'Guisantes amarillos partidos cocidos', alias: ['guisantes amarillos partidos cocidos'], cal: 118, prot: 8.3, carb: 21.1, gras: 0.4, unidad: 150 },
+    { nombre: 'Leche semidesnatada', alias: ['leche semidesnatada'], cal: 46, prot: 3.4, carb: 4.8, gras: 1.6, unidad: 240 },
+    { nombre: 'Yogur desnatado', alias: ['yogur desnatado'], cal: 40, prot: 4.5, carb: 5.5, gras: 0.1, unidad: 125 },
+    { nombre: 'Mantequilla', alias: ['mantequilla'], cal: 717, prot: 0.8, carb: 0.6, gras: 81, unidad: 10 },
+    { nombre: 'Nata para montar', alias: ['nata para montar', 'nata'], cal: 340, prot: 2.2, carb: 2.8, gras: 35, unidad: 20 },
+    { nombre: 'Kéfir', alias: ['kéfir', 'kefir'], cal: 55, prot: 3.6, carb: 4.2, gras: 2.5, unidad: 240 },
+    { nombre: 'Cuajada', alias: ['cuajada'], cal: 96, prot: 4.5, carb: 7.5, gras: 5.5, unidad: 125 },
+    { nombre: 'Yogur Skyr', alias: ['yogur skyr', 'skyr'], cal: 65, prot: 11, carb: 4, gras: 0.2, unidad: 150 },
+    { nombre: 'Yogur proteico', alias: ['yogur proteico'], cal: 57, prot: 10, carb: 3.5, gras: 0.5, unidad: 150 },
+    { nombre: 'Queso Cottage', alias: ['queso cottage', 'cottage'], cal: 98, prot: 11.1, carb: 3.4, gras: 4.3, unidad: 100 },
+    { nombre: 'Queso Quark', alias: ['queso quark', 'quark'], cal: 68, prot: 12, carb: 4.1, gras: 0.2, unidad: 100 },
+    { nombre: 'Queso Roquefort', alias: ['queso roquefort', 'queso azul', 'roquefort'], cal: 369, prot: 21.5, carb: 2, gras: 30.6, unidad: 30 },
+    { nombre: 'Queso Brie', alias: ['queso brie', 'brie'], cal: 334, prot: 20.7, carb: 0.5, gras: 27.7, unidad: 30 },
+    { nombre: 'Queso Ricotta', alias: ['queso ricotta', 'requeson', 'ricotta'], cal: 174, prot: 11.3, carb: 3, gras: 13, unidad: 50 },
+    { nombre: 'Queso Mascarpone', alias: ['queso mascarpone', 'mascarpone'], cal: 429, prot: 4.5, carb: 1.5, gras: 45, unidad: 30 },
+    { nombre: 'Langostino', alias: ['langostino', 'langostinos'], cal: 90, prot: 18.5, carb: 0.5, gras: 1, unidad: 100 },
+    { nombre: 'Cangrejo', alias: ['cangrejo'], cal: 87, prot: 18, carb: 0, gras: 1.5, unidad: 100 },
+    { nombre: 'Langosta', alias: ['langosta'], cal: 89, prot: 19, carb: 0.5, gras: 0.9, unidad: 150 },
+    { nombre: 'Carabinero', alias: ['carabinero', 'carabineros'], cal: 95, prot: 19.2, carb: 0.8, gras: 1.1, unidad: 100 },
+    { nombre: 'Pulpo', alias: ['pulpo'], cal: 82, prot: 15, carb: 2, gras: 1, unidad: 150 },
+    { nombre: 'Sepia', alias: ['sepia'], cal: 79, prot: 16.2, carb: 0.8, gras: 0.9, unidad: 150 },
+    { nombre: 'Almeja', alias: ['almeja', 'almejas'], cal: 74, prot: 12.8, carb: 2.6, gras: 1.2, unidad: 100 },
+    { nombre: 'Berberecho', alias: ['berberecho', 'berberechos'], cal: 79, prot: 13, carb: 3.5, gras: 1, unidad: 100 },
+    { nombre: 'Vieiras', alias: ['vieiras', 'vieira'], cal: 84, prot: 15, carb: 3, gras: 0.8, unidad: 100 },
+    { nombre: 'Ostras', alias: ['ostras', 'ostra'], cal: 68, prot: 7, carb: 4, gras: 2.5, unidad: 100 },
+    { nombre: 'Percebes', alias: ['percebes'], cal: 66, prot: 15.7, carb: 0, gras: 0.4, unidad: 100 },
+    { nombre: 'Navajas', alias: ['navajas'], cal: 79, prot: 16, carb: 1.5, gras: 1, unidad: 100 },
+    { nombre: 'Pan de molde', alias: ['pan de molde'], cal: 260, prot: 8, carb: 46, gras: 3.5, unidad: 30 },
+    { nombre: 'Pan canario', alias: ['pan canario', 'pella', 'pan redondo canario'], cal: 270, prot: 8.2, carb: 52, gras: 1.5, unidad: 40 },
+    { nombre: 'Cherne', alias: ['cherne'], cal: 95, prot: 20, carb: 0, gras: 1.5, unidad: 150 },
+    { nombre: 'Vieja', alias: ['vieja', 'vieja canaria'], cal: 90, prot: 19, carb: 0, gras: 1, unidad: 150 },
+    { nombre: 'Mero', alias: ['mero'], cal: 92, prot: 19.5, carb: 0, gras: 1.3, unidad: 150 },
+    { nombre: 'Lubina', alias: ['lubina'], cal: 97, prot: 18, carb: 0, gras: 2, unidad: 150 },
+    { nombre: 'Dorada', alias: ['dorada'], cal: 82, prot: 16.5, carb: 0, gras: 1.7, unidad: 150 },
+    { nombre: 'Sardina', alias: ['sardina', 'sardina fresca'], cal: 140, prot: 18, carb: 0, gras: 7.5, unidad: 100 },
+    { nombre: 'Atún fresco', alias: ['atún fresco', 'atun fresco'], cal: 144, prot: 23, carb: 0, gras: 5, unidad: 150 },
+    { nombre: 'Bonito', alias: ['bonito'], cal: 138, prot: 24, carb: 0, gras: 4.5, unidad: 150 },
+    { nombre: 'Abadejo', alias: ['abadejo'], cal: 75, prot: 16.5, carb: 0, gras: 0.8, unidad: 150 },
+    { nombre: 'Pez espada', alias: ['pez espada', 'emperador'], cal: 144, prot: 21, carb: 0, gras: 6, unidad: 150 },
+    { nombre: 'Cazón', alias: ['cazón', 'cazon'], cal: 90, prot: 19, carb: 0, gras: 1.2, unidad: 150 },
+    { nombre: 'Lenguado', alias: ['lenguado'], cal: 86, prot: 17.5, carb: 0, gras: 1.5, unidad: 150 },
+    { nombre: 'Rape', alias: ['rape'], cal: 76, prot: 16.5, carb: 0, gras: 1, unidad: 150 },
+    { nombre: 'Caballa', alias: ['caballa'], cal: 159, prot: 17, carb: 0, gras: 10, unidad: 150 },
+    { nombre: 'Boquerón', alias: ['boquerón', 'boqueron', 'boquerones'], cal: 110, prot: 16.5, carb: 0, gras: 4.8, unidad: 100 },
+    { nombre: 'Jurel', alias: ['jurel', 'chicharro'], cal: 117, prot: 19, carb: 0, gras: 4.5, unidad: 150 },
+    { nombre: 'Trucha', alias: ['trucha'], cal: 141, prot: 20, carb: 0, gras: 6, unidad: 150 },
+    { nombre: 'Rodaballo', alias: ['rodaballo'], cal: 95, prot: 16, carb: 0, gras: 3, unidad: 150 },
+    { nombre: 'Raya', alias: ['raya'], cal: 89, prot: 19.5, carb: 0, gras: 0.9, unidad: 150 },
+    { nombre: 'Salmón ahumado', alias: ['salmón ahumado', 'salmon ahumado'], cal: 117, prot: 18, carb: 0, gras: 4.3, unidad: 50 },
+    { nombre: 'Anguilas', alias: ['anguilas', 'anguila'], cal: 281, prot: 15, carb: 0, gras: 24, unidad: 100 },
+    { nombre: 'Bacalao salado desalado', alias: ['bacalao salado desalado', 'bacalao desalado'], cal: 105, prot: 23, carb: 0, gras: 1, unidad: 150 },
+    { nombre: 'Atún en aceite de oliva', alias: ['atún en aceite de oliva', 'atun en aceite'], cal: 190, prot: 22, carb: 0, gras: 11, unidad: 80 },
+    { nombre: 'Surimi', alias: ['surimi', 'palitos de cangrejo'], cal: 99, prot: 8, carb: 13, gras: 1.5, unidad: 80 },
+    { nombre: 'Anchoas en aceite', alias: ['anchoas en aceite', 'anchoas'], cal: 210, prot: 29, carb: 0, gras: 10, unidad: 20 },
+    { nombre: 'Gulas', alias: ['gulas'], cal: 165, prot: 11, carb: 10, gras: 9, unidad: 80 },
+    { nombre: 'Sardinillas en salsa de tomate', alias: ['sardinillas en salsa de tomate', 'sardinillas'], cal: 150, prot: 16, carb: 2, gras: 8.5, unidad: 80 },
+    { nombre: 'Queso tierno canario', alias: ['queso tierno canario', 'queso canario tierno'], cal: 350, prot: 21, carb: 1, gras: 29, unidad: 30 },
+    { nombre: 'Queso semicurado', alias: ['queso semicurado'], cal: 385, prot: 24, carb: 1.2, gras: 32, unidad: 30 },
+    { nombre: 'Queso curado', alias: ['queso curado'], cal: 415, prot: 27, carb: 1.5, gras: 35, unidad: 20 },
+    { nombre: 'Queso de cabra canario', alias: ['queso de cabra canario', 'queso de cabra'], cal: 360, prot: 22, carb: 1.1, gras: 30, unidad: 30 },
+    { nombre: 'Queso Cheddar', alias: ['queso cheddar', 'cheddar'], cal: 403, prot: 25, carb: 1.3, gras: 33, unidad: 30 },
+    { nombre: 'Queso Mozzarella', alias: ['queso mozzarella', 'mozzarella'], cal: 280, prot: 18, carb: 2.2, gras: 22, unidad: 30 },
+    { nombre: 'Queso Parmesano', alias: ['queso parmesano', 'parmesano'], cal: 431, prot: 38, carb: 4.1, gras: 29, unidad: 15 },
+    { nombre: 'Queso Gouda', alias: ['queso gouda', 'gouda'], cal: 356, prot: 25, carb: 2.2, gras: 27, unidad: 30 },
+    { nombre: 'Queso crema', alias: ['queso crema', 'philadelphia'], cal: 242, prot: 6, carb: 3.5, gras: 23, unidad: 20 },
+    { nombre: 'Mostaza', alias: ['mostaza'], cal: 65, prot: 4, carb: 5.5, gras: 4, unidad: 15 },
+    { nombre: 'Salsa de soja', alias: ['salsa de soja', 'soja salsa', 'salsa soja'], cal: 53, prot: 5.5, carb: 4.9, gras: 0.1, unidad: 10 },
+    { nombre: 'Guacamole', alias: ['guacamole'], cal: 155, prot: 1.5, carb: 5.5, gras: 14, unidad: 40 },
+    { nombre: 'Crema de cacahuete', alias: ['crema de cacahuete', 'mantequilla de cacahuete', 'peanut butter'], cal: 588, prot: 25, carb: 16, gras: 50, unidad: 20 },
+    { nombre: 'Crema de almendras', alias: ['crema de almendras'], cal: 614, prot: 21, carb: 19, gras: 56, unidad: 20 },
+    { nombre: 'Tahini', alias: ['tahini', 'pasta de sesamo'], cal: 595, prot: 17, carb: 21, gras: 54, unidad: 15 },
+    { nombre: 'Salsa Teriyaki', alias: ['salsa teriyaki', 'teriyaki'], cal: 89, prot: 6, carb: 15, gras: 0, unidad: 15 },
+    { nombre: 'Salsa Barbacoa', alias: ['salsa barbacoa', 'bbq', 'salsa bbq'], cal: 170, prot: 1, carb: 40, gras: 0.5, unidad: 15 },
+    { nombre: 'Salsa Sriracha', alias: ['salsa sriracha', 'sriracha'], cal: 80, prot: 1.5, carb: 16, gras: 0.5, unidad: 10 },
+    { nombre: 'Pasta de curry', alias: ['pasta de curry', 'curry rojo', 'curry verde'], cal: 110, prot: 3, carb: 12, gras: 4.5, unidad: 15 },
+    { nombre: 'Mojo picón', alias: ['mojo picón', 'mojo rojo', 'mojo picante'], cal: 250, prot: 1.5, carb: 6, gras: 24, unidad: 25 },
+    { nombre: 'Mojo verde', alias: ['mojo verde', 'mojo de cilantro'], cal: 220, prot: 1, carb: 4, gras: 21, unidad: 25 },
+    { nombre: 'Mojo hervido', alias: ['mojo hervido'], cal: 180, prot: 1.2, carb: 5, gras: 16, unidad: 25 },
+    { nombre: 'Salmorejo canario', alias: ['salmorejo canario'], cal: 230, prot: 1.5, carb: 5.5, gras: 22, unidad: 25 },
+    { nombre: 'Pisto de verduras', alias: ['pisto de verduras', 'pisto', 'ratatouille'], cal: 68, prot: 1.5, carb: 7, gras: 3, unidad: 150 },
+    { nombre: 'Tomate frito', alias: ['tomate frito', 'tomate frito comercial'], cal: 85, prot: 1.3, carb: 10, gras: 4.5, unidad: 40 },
+    { nombre: 'Tomate triturado', alias: ['tomate triturado', 'tomate triturado natural'], cal: 20, prot: 0.9, carb: 3.5, gras: 0.2, unidad: 100 },
+    { nombre: 'Tofu firme', alias: ['tofu firme'], cal: 144, prot: 15.7, carb: 2.8, gras: 8.7, unidad: 100 },
+    { nombre: 'Seitán', alias: ['seitán', 'seitan'], cal: 119, prot: 24, carb: 5.3, gras: 1.9, unidad: 100 },
+    { nombre: 'Tempeh', alias: ['tempeh'], cal: 192, prot: 20.3, carb: 7.6, gras: 10.8, unidad: 100 },
+    { nombre: 'Soja texturizada', alias: ['soja texturizada', 'soja texturizada seca'], cal: 364, prot: 50, carb: 30, gras: 4, unidad: 40 },
+    { nombre: 'Heura', alias: ['heura', 'bocados vegetales'], cal: 136, prot: 19.7, carb: 1.8, gras: 3, unidad: 100 },
+    { nombre: 'Bebida de avena', alias: ['bebida de avena', 'leche de avena'], cal: 40, prot: 1, carb: 6.5, gras: 1.5, unidad: 240 },
+    { nombre: 'Bebida de soja', alias: ['bebida de soja', 'leche de soja'], cal: 33, prot: 3.3, carb: 1.8, gras: 1.8, unidad: 240 },
+    { nombre: 'Bebida de almendras', alias: ['bebida de almendras', 'leche de almendras'], cal: 24, prot: 0.5, carb: 3, gras: 1.1, unidad: 240 },
+    { nombre: 'Patatas fritas de bolsa', alias: ['patatas fritas de bolsa', 'chips', 'papas fritas de bolsa'], cal: 536, prot: 6, carb: 50, gras: 35, unidad: 30 },
+    { nombre: 'Palomitas de maíz', alias: ['palomitas de maíz', 'palomitas', 'palomitas caseras'], cal: 387, prot: 12, carb: 74, gras: 4.3, unidad: 30 },
+    { nombre: 'Barrita de proteínas', alias: ['barrita de proteínas', 'barrita proteica', 'barrita de proteina'], cal: 350, prot: 30, carb: 35, gras: 12, unidad: 60 },
+    { nombre: 'Proteína Whey', alias: ['proteína whey', 'whey', 'proteina en polvo', 'batido de proteina'], cal: 380, prot: 75, carb: 8, gras: 5, unidad: 30 },
+    { nombre: 'Creatina monohidrato', alias: ['creatina monohidrato', 'creatina'], cal: 0, prot: 0, carb: 0, gras: 0, unidad: 5 },
+    { nombre: 'Gominolas', alias: ['gominolas', 'chuches'], cal: 330, prot: 5, carb: 78, gras: 0.1, unidad: 30 },
+    { nombre: 'Chocolate blanco', alias: ['chocolate blanco'], cal: 539, prot: 6, carb: 59, gras: 32, unidad: 25 },
+    { nombre: 'Galletas de avena', alias: ['galletas de avena'], cal: 450, prot: 8, carb: 68, gras: 15, unidad: 25 },
+    { nombre: 'Tortitas de arroz con chocolate', alias: ['tortitas de arroz con chocolate'], cal: 465, prot: 6.5, carb: 62, gras: 21, unidad: 20 },
+    { nombre: 'Kikos', alias: ['kikos', 'maiz tostado'], cal: 415, prot: 7, carb: 68, gras: 12, unidad: 30 },
+    { nombre: 'Nachos', alias: ['nachos', 'totopos'], cal: 500, prot: 7, carb: 61, gras: 24, unidad: 40 },
+    { nombre: 'Cortezas de cerdo', alias: ['cortezas de cerdo', 'chicharrones'], cal: 544, prot: 61, carb: 0, gras: 31, unidad: 20 },
+    { nombre: 'Batata', alias: ['batata', 'boniato'], cal: 86, prot: 1.6, carb: 20, gras: 0.1, unidad: 150 },
+    { nombre: 'Nabo', alias: ['nabo'], cal: 28, prot: 0.9, carb: 6.4, gras: 0.1, unidad: 100 },
+    { nombre: 'Yuca', alias: ['yuca', 'mandioca'], cal: 160, prot: 1.4, carb: 38, gras: 0.3, unidad: 150 },
+    { nombre: 'Malanga', alias: ['malanga'], cal: 112, prot: 1.5, carb: 26.5, gras: 0.2, unidad: 150 },
+    { nombre: 'Ñame', alias: ['ñame', 'name'], cal: 118, prot: 1.5, carb: 27.9, gras: 0.2, unidad: 150 },
+    { nombre: 'Repollo', alias: ['repollo', 'col'], cal: 25, prot: 1.3, carb: 5.8, gras: 0.1, unidad: 100 },
+    { nombre: 'Coliflor', alias: ['coliflor'], cal: 25, prot: 1.9, carb: 5, gras: 0.3, unidad: 150 },
+    { nombre: 'Alcachofa', alias: ['alcachofa', 'alcachofas'], cal: 47, prot: 3.3, carb: 10.5, gras: 0.1, unidad: 120 },
+    { nombre: 'Acelgas', alias: ['acelgas'], cal: 19, prot: 1.8, carb: 3.7, gras: 0.2, unidad: 100 },
+    { nombre: 'Berros', alias: ['berros'], cal: 11, prot: 2.3, carb: 1.3, gras: 0.1, unidad: 40 },
+    { nombre: 'Lechuga romana', alias: ['lechuga romana'], cal: 17, prot: 1.2, carb: 3.3, gras: 0.3, unidad: 50 },
+    { nombre: 'Escarola', alias: ['escarola'], cal: 16, prot: 1.3, carb: 3.1, gras: 0.2, unidad: 50 },
+    { nombre: 'Hígado de ternera', alias: ['hígado de ternera', 'higado de ternera', 'higado'], cal: 136, prot: 20.4, carb: 3.8, gras: 3.6, unidad: 100 },
+    { nombre: 'Pechuga de pollo con ensalada mixta', alias: ['pechuga de pollo con ensalada mixta'], cal: 95, prot: 15.5, carb: 2, gras: 2.5, unidad: 350 },
+    { nombre: 'Pollo asado con papas asadas', alias: ['pollo asado con papas asadas', 'pollo asado sin piel con papas asadas'], cal: 110, prot: 12, carb: 9, gras: 3, unidad: 350 },
+    { nombre: 'Pavo a la plancha con arroz integral', alias: ['pavo a la plancha con arroz integral'], cal: 125, prot: 14, carb: 13, gras: 1.5, unidad: 350 },
+    { nombre: 'Ternera magra con brócoli y zanahoria', alias: ['ternera magra con brócoli y zanahoria', 'ternera con brocoli y zanahoria'], cal: 85, prot: 12, carb: 4, gras: 2, unidad: 350 },
+    { nombre: 'Lomo de cerdo a la plancha con papas guisadas', alias: ['lomo de cerdo a la plancha con papas guisadas'], cal: 115, prot: 12.5, carb: 10, gras: 2.5, unidad: 350 },
+    { nombre: 'Carne picada magra con pisto de verduras', alias: ['carne picada magra con pisto de verduras'], cal: 110, prot: 11, carb: 5.5, gras: 4.5, unidad: 350 },
+    { nombre: 'Pechuga de pollo con quinoa y verduras', alias: ['pechuga de pollo con quinoa y verduras'], cal: 120, prot: 13.5, carb: 11, gras: 2, unidad: 350 },
+    { nombre: 'Solomillo de cerdo con champiñones al ajillo', alias: ['solomillo de cerdo con champiñones al ajillo'], cal: 98, prot: 14.5, carb: 3.5, gras: 2.5, unidad: 350 },
+    { nombre: 'Salmón al horno con espárragos trigueros', alias: ['salmón al horno con espárragos trigueros', 'salmon al horno con esparragos'], cal: 114, prot: 11, carb: 1.5, gras: 6.5, unidad: 350 },
+    { nombre: 'Merluza a la plancha con ensalada verde', alias: ['merluza a la plancha con ensalada verde'], cal: 50, prot: 8.5, carb: 1.5, gras: 1, unidad: 350 },
+    { nombre: 'Cherne a la plancha con papas guisadas', alias: ['cherne a la plancha con papas guisadas'], cal: 91, prot: 11, carb: 10, gras: 1, unidad: 350 },
+    { nombre: 'Atún a la plancha con pimientos asados', alias: ['atún a la plancha con pimientos asados', 'atun a la plancha con pimientos'], cal: 85, prot: 13, carb: 2.5, gras: 2.5, unidad: 350 },
+    { nombre: 'Dorada al horno con verduras variadas', alias: ['dorada al horno con verduras variadas'], cal: 65, prot: 9.5, carb: 3, gras: 1.5, unidad: 350 },
+    { nombre: 'Bacalao desalado con pisto', alias: ['bacalao desalado con pisto'], cal: 75, prot: 12, carb: 4, gras: 1.5, unidad: 350 },
+    { nombre: 'Sepia a la plancha con ensalada de tomate', alias: ['sepia a la plancha con ensalada de tomate'], cal: 55, prot: 9, carb: 2.5, gras: 0.8, unidad: 350 },
+    { nombre: 'Gambas salteadas con calabacín y ajo', alias: ['gambas salteadas con calabacín y ajo', 'gambas salteadas con calabacin y ajo'], cal: 60, prot: 10, carb: 2, gras: 1.5, unidad: 350 },
+    { nombre: 'Tortilla francesa con champiñones', alias: ['tortilla francesa con champiñones'], cal: 110, prot: 9.5, carb: 1.5, gras: 7.5, unidad: 200 },
+    { nombre: 'Huevos revueltos con espinacas y pavo', alias: ['huevos revueltos con espinacas y pavo'], cal: 105, prot: 11, carb: 1.5, gras: 6, unidad: 200 },
+    { nombre: 'Tortilla de atún con dos huevos', alias: ['tortilla de atún con dos huevos', 'tortilla de atun al natural'], cal: 125, prot: 15, carb: 0.5, gras: 6.5, unidad: 200 },
+    { nombre: 'Huevos a la plancha con batata asada', alias: ['huevos a la plancha con batata asada'], cal: 120, prot: 7.5, carb: 10.5, gras: 5.5, unidad: 300 },
+    { nombre: 'Tortilla de calabacín y cebolla', alias: ['tortilla de calabacín y cebolla'], cal: 95, prot: 7, carb: 3.5, gras: 6, unidad: 200 },
+    { nombre: 'Huevos revueltos con tomates cherry', alias: ['huevos revueltos con tomates cherry'], cal: 100, prot: 8.5, carb: 2, gras: 6.5, unidad: 200 },
+    { nombre: 'Revuelto de claras con gambas y ajos tiernos', alias: ['revuelto de claras con gambas y ajos tiernos', 'revuelto de claras con gambas'], cal: 65, prot: 11, carb: 2.5, gras: 1, unidad: 200 },
+    { nombre: 'Ensalada de garbanzos con atún y tomate', alias: ['ensalada de garbanzos con atún y tomate', 'ensalada de garbanzos con atun'], cal: 110, prot: 9.5, carb: 13, gras: 1.5, unidad: 350 },
+    { nombre: 'Lentejas estofadas con verduras', alias: ['lentejas estofadas con verduras', 'lentejas estofadas sin grasa'], cal: 85, prot: 5.5, carb: 14, gras: 0.5, unidad: 350 },
+    { nombre: 'Tofu a la plancha con quinoa y vegetales', alias: ['tofu a la plancha con quinoa y vegetales'], cal: 140, prot: 9, carb: 16, gras: 4, unidad: 350 },
+    { nombre: 'Heura con arroz integral', alias: ['heura con arroz integral', 'pollo vegetal con arroz integral'], cal: 135, prot: 10, carb: 18, gras: 2, unidad: 350 },
+    { nombre: 'Ensalada de alubias blancas con pepino y pimiento', alias: ['ensalada de alubias blancas con pepino y pimiento'], cal: 80, prot: 4.5, carb: 12.5, gras: 0.5, unidad: 350 },
+    { nombre: 'Pisto de verduras con un huevo cuajado', alias: ['pisto de verduras con un huevo cuajado'], cal: 75, prot: 4.5, carb: 5.5, gras: 3.5, unidad: 300 },
+    { nombre: 'Guisantes salteados con taquitos de jamón', alias: ['guisantes salteados con taquitos de jamón', 'guisantes salteados con jamon'], cal: 95, prot: 7.5, carb: 10.5, gras: 2, unidad: 300 },
+    { nombre: 'Ensalada de pasta integral con atún y huevo duro', alias: ['ensalada de pasta integral con atún y huevo duro', 'ensalada de pasta con atun y huevo'], cal: 140, prot: 8.5, carb: 18, gras: 3.5, unidad: 350 },
+];
+
+// ============================================================
+// UTILIDADES: Levenshtein y normalización
+// ============================================================
+function levenshtein(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            const cost = a[j-1] === b[i-1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i-1][j] + 1,
+                matrix[i][j-1] + 1,
+                matrix[i-1][j-1] + cost
+            );
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+function normalizarPalabra(palabra) {
+    let p = palabra.toLowerCase().trim();
+    p = p.replace(/[áäàâ]/g, 'a').replace(/[éëèê]/g, 'e').replace(/[íïìî]/g, 'i').replace(/[óöòô]/g, 'o').replace(/[úüùû]/g, 'u');
+    if (p.endsWith('es') && p.length > 3) p = p.slice(0, -2);
+    else if (p.endsWith('s') && p.length > 2) p = p.slice(0, -1);
+    if (p.endsWith('a') || p.endsWith('o')) p = p.slice(0, -1);
+    return p;
+}
+
+function normalizarParaSugerencias(texto) {
+    return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function tokenizar(texto) {
+    const palabras = texto.toLowerCase().trim().split(/\s+/);
+    const stopwords = ['de', 'la', 'el', 'los', 'las', 'un', 'una', 'unos', 'unas', 'con', 'sin', 'y', 'o', 'u', 'para', 'por', 'en', 'al', 'del', 'a', 'e', 'que', 'como', 'mas', 'pero', 'si', 'no', 'su', 'sus', 'mi', 'mis', 'tu', 'tus'];
+    return palabras
+        .filter(p => !/^[\d.,]+$/.test(p) && !/^(g|gr|kg|ml|l)$/.test(p) && !stopwords.includes(p))
+        .map(normalizarPalabra)
+        .filter(p => p.length > 1);
+}
+
+function fuzzyMatch(aliasTokens, userTokens) {
+    let coincidencias = 0;
+    let total = aliasTokens.length;
+    for (const at of aliasTokens) {
+        let mejorDist = Infinity;
+        for (const ut of userTokens) {
+            const dist = levenshtein(at, ut);
+            if (dist < mejorDist) mejorDist = dist;
+        }
+        if (mejorDist <= 2 || (at.length > 2 && userTokens.some(u => u.includes(at) || at.includes(u)))) {
+            coincidencias++;
+        }
+    }
+    return coincidencias / total;
+}
+
+// ============================================================
+// BÚSQUEDA Y SUGERENCIAS LOCALES
+// ============================================================
+function obtenerSugerenciasLocales(textoUsuario, db) {
+    const textoLimpio = normalizarParaSugerencias(textoUsuario);
+    if (textoLimpio.length < 2) return [];
+
+    const terminosUsuario = textoLimpio.split(' ');
+    const resultados = [];
+    const idsAgregados = new Set();
+
+    db.forEach(alimento => {
+        const candidatos = [alimento.nombre, ...(alimento.alias || [])];
+        let coincidenciaFuerte = false;
+
+        candidatos.forEach(aliasText => {
+            if (coincidenciaFuerte) return;
+            const palabrasAlias = normalizarParaSugerencias(aliasText).split(' ');
+            const matchCompleto = terminosUsuario.every(termUser =>
+                palabrasAlias.some(palabra => palabra.startsWith(termUser))
+            );
+            if (matchCompleto) coincidenciaFuerte = true;
+        });
+
+        if (coincidenciaFuerte && !idsAgregados.has(alimento.nombre)) {
+            resultados.push(alimento);
+            idsAgregados.add(alimento.nombre);
+        }
+    });
+    return resultados.slice(0, 8);
+}
+
+function buscarAlimento(textoOriginal, db) {
+    const userTokens = tokenizar(textoOriginal);
+    if (userTokens.length === 0) return null;
+
+    let mejor = null;
+    let mejorScore = 0;
+
+    for (const item of db) {
+        const candidatos = [item.nombre, ...(item.alias || [])];
+        for (const cand of candidatos) {
+            const aliasTokens = tokenizar(cand);
+            if (aliasTokens.length === 0) continue;
+            const score = fuzzyMatch(aliasTokens, userTokens);
+            const lengthBonus = Math.min(cand.length / 20, 0.2);
+            const totalScore = score + lengthBonus;
+            if (totalScore > mejorScore) {
+                mejorScore = totalScore;
+                mejor = item;
+            }
+        }
+    }
+    if (mejorScore < 0.6) return null;
+    return mejor;
+}
+
+const extraerGramos = (textoOriginal, item) => {
+    const texto = normalizarParaSugerencias(textoOriginal);
+    const matchPeso = texto.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kilogramos?|gr|grs|gramos?|g)\b/);
+    if (matchPeso) {
+        let cantidad = parseFloat(matchPeso[1].replace(',', '.'));
+        if (/kg|kilo/.test(matchPeso[2])) cantidad *= 1000;
+        return { gramos: Math.round(cantidad), detectado: true };
+    }
+    if (item && item.unidad) {
+        const matchDigito = texto.match(/(\d+(?:[.,]\d+)?)\s*(unidades?|piezas?)?/);
+        const palabras = texto.split(/\s+/);
+        let cantidadUnidades = null;
+        const NUMERO_PALABRA = { 'un':1,'una':1,'uno':1,'dos':2,'tres':3,'cuatro':4,'cinco':5,'seis':6,'siete':7,'ocho':8,'medio':0.5,'media':0.5 };
+        for (const palabra of palabras) {
+            if (NUMERO_PALABRA[palabra] !== undefined) { cantidadUnidades = NUMERO_PALABRA[palabra]; break; }
+        }
+        if (cantidadUnidades === null && matchDigito && matchDigito[1] && !matchPeso) {
+            cantidadUnidades = parseFloat(matchDigito[1].replace(',', '.'));
+        }
+        if (cantidadUnidades) {
+            return { gramos: Math.round(item.unidad * cantidadUnidades), detectado: true };
+        }
+    }
+    return { gramos: item && item.unidad ? item.unidad : 100, detectado: false };
+};
+
+const calcularMacrosPorPeso = (item, gramos) => {
+    const factor = gramos / 100;
+    return {
+        alimento: item.nombre,
+        calorias: Math.round(item.cal * factor),
+        proteinas: Math.round(item.prot * factor * 10) / 10,
+        carbohidratos: Math.round(item.carb * factor * 10) / 10,
+        grasas: Math.round(item.gras * factor * 10) / 10,
+        gramos: Math.round(gramos)
+    };
+};
+
+const loadDatabase = () => {
+    try {
+        const saved = localStorage.getItem(DATABASE_KEY);
+        if (saved) return JSON.parse(saved);
+        
+        // Migración inicial para no perder los alimentos custom antiguos
+        const oldCustomsData = localStorage.getItem(CUSTOM_FOODS_KEY);
+        if (oldCustomsData) {
+            const oldCustoms = JSON.parse(oldCustomsData);
+            if (oldCustoms.length > 0) {
+                const merged = [...INITIAL_FOOD_DB];
+                oldCustoms.forEach(cf => {
+                    const idx = merged.findIndex(f => f.nombre.toLowerCase() === cf.nombre.toLowerCase());
+                    if (idx >= 0) merged[idx] = cf;
+                    else merged.unshift(cf); // Añadir al principio
+                });
+                localStorage.setItem(DATABASE_KEY, JSON.stringify(merged));
+                return merged;
+            }
+        }
+    } catch(e) {}
+    return INITIAL_FOOD_DB;
+};
+
+const loadEntries = () => { try { const s = localStorage.getItem(STORAGE_KEY); if (s) return JSON.parse(s); } catch(e) {} return []; };
+const saveEntries = (list) => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {} };
+const loadProfile = () => { try { const s = localStorage.getItem(PROFILE_KEY); if (s) return JSON.parse(s); } catch(e) {} return null; };
+const saveProfile = (profile) => { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch(e) {} };
+const loadClosedDays = () => { try { const s = localStorage.getItem(CLOSED_DAYS_KEY); if (s) return JSON.parse(s); } catch(e) {} return []; };
+const saveClosedDays = (days) => { try { localStorage.setItem(CLOSED_DAYS_KEY, JSON.stringify(days)); } catch(e) {} };
+const todayStr = () => fechaLocalStr();
+const formatFechaAmigable = (fechaStr) => {
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    if (fecha.getTime() === hoy.getTime()) return 'Hoy';
+    if (fecha.getTime() === ayer.getTime()) return 'Ayer';
+    const diffDias = Math.floor((hoy.getTime() - fecha.getTime()) / 86400000);
+    if (diffDias < 7 && diffDias >= 0) {
+        const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        return dias[fecha.getDay()];
+    }
+    return `${fecha.getDate()} ${fecha.toLocaleString('es', { month: 'short' })}`;
+};
+
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
+const App = () => {
+    const [database, setDatabase] = useState(() => loadDatabase());
+    const [entries, setEntries] = useState(() => loadEntries());
+    const [modalOpen, setModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState(null);
+    const [formData, setFormData] = useState(EMPTY_FORM);
+    const [toast, setToast] = useState(null);
+    const [isListening, setIsListening] = useState(false);
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [showCreator, setShowCreator] = useState(false);
+    const [showGuide, setShowGuide] = useState(false);
+    const [guideTab, setGuideTab] = useState('voz');
+    const [voiceGuideShown, setVoiceGuideShown] = useState(() => localStorage.getItem(GUIDE_SHOWN_KEY) === 'true');
+    const [profile, setProfile] = useState(() => loadProfile());
+    const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [closedDays, setClosedDays] = useState(() => loadClosedDays());
+    const [calculatedMacros, setCalculatedMacros] = useState(null);
+    
+    // Historial Modal
+    const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+    // Sugerencias UI
+    const [sugerencias, setSugerencias] = useState([]);
+    const [showSugerencias, setShowSugerencias] = useState(false);
+    
+    // Platos combinados: catálogo con receta desplegable
+    const [platosModalOpen, setPlatosModalOpen] = useState(false);
+    const [platoDetalle, setPlatoDetalle] = useState(null);
+    const PLATOS_COMBINADOS = useMemo(() => database.filter(f => RECIPES[f.nombre]), [database]);
+    const [pendingCustomFood, setPendingCustomFood] = useState(null);
+    const [customForm, setCustomForm] = useState({ cal: '', prot: '', carb: '', gras: '' });
+
+    // Gestor de base de datos
+    const [manageFoodsOpen, setManageFoodsOpen] = useState(false);
+    const [dbSearch, setDbSearch] = useState('');
+    const [foodFormOpen, setFoodFormOpen] = useState(false);
+    const [foodEditingIndex, setFoodEditingIndex] = useState(null);
+    const EMPTY_FOOD_FORM = { nombre: '', alias: '', cal: '', prot: '', carb: '', gras: '', unidad: '100', receta: '' };
+    const [foodForm, setFoodForm] = useState(EMPTY_FOOD_FORM);
+
+    const lastMatchRef = useRef(null);
+    const inputRef = useRef(null);
+    const recognitionRef = useRef(null);
+    const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'dark');
+
+    useEffect(() => {
+        document.body.classList.toggle('light-mode', theme === 'light');
+        localStorage.setItem(THEME_KEY, theme);
+    }, [theme]);
+
+    useEffect(() => { saveEntries(entries); }, [entries]);
+    useEffect(() => { if (profile) saveProfile(profile); }, [profile]);
+    useEffect(() => { saveClosedDays(closedDays); }, [closedDays]);
+    useEffect(() => {
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline); };
+    }, []);
+
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
+
+    const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+
+    const calcularObjetivoDesde = (p) => {
+        if (!p) return null;
+        const sexo = p.sexo;
+        const edad = Number(p.edad) || 0;
+        const altura = Number(p.altura) || 0;
+        const peso = Number(p.peso) || 0;
+        const actividad = Number(p.actividad) || 0;
+        let tmb = sexo === 'hombre' ? 10 * peso + 6.25 * altura - 5 * edad + 5 : 10 * peso + 6.25 * altura - 5 * edad - 161;
+        const factorActividad = [1.2, 1.375, 1.55, 1.725, 1.9][actividad] || 1.2;
+        const get = tmb * factorActividad;
+        let objetivo, deficit;
+        if (p.modoObjetivo === 'directo') {
+            objetivo = Math.max(0, Number(p.objetivoDirecto) || 0);
+            deficit = Math.round(get - objetivo);
+        } else {
+            deficit = Number(p.deficit) || 0;
+            objetivo = Math.max(0, get - deficit);
+        }
+        return { tmb, get, objetivo, deficit };
+    };
+
+    const calcularObjetivo = useMemo(() => calcularObjetivoDesde(profile), [profile]);
+    const todayKey = todayStr();
+    const isTodayClosed = closedDays.includes(todayKey);
+
+    const todayEntries = useMemo(() => {
+        if (isTodayClosed) return [];
+        return entries.filter(e => e.date === todayKey).sort((a,b) => b.id - a.id);
+    }, [entries, todayKey, isTodayClosed]);
+
+    const todayTotals = useMemo(() => todayEntries.reduce((acc, e) => ({
+        kcal: acc.kcal + e.calorias, prot: acc.prot + e.proteinas, carb: acc.carb + e.carbohidratos, fat: acc.fat + e.grasas,
+    }), { kcal: 0, prot: 0, carb: 0, fat: 0 }), [todayEntries]);
+
+    const pastDays = useMemo(() => {
+        const byDay = {};
+        entries.forEach(e => {
+            if (e.date === todayKey || closedDays.includes(e.date)) return;
+            byDay[e.date] = (byDay[e.date] || 0) + e.calorias;
+        });
+        return Object.keys(byDay).sort().reverse().map(d => ({ date: d, kcal: byDay[d] }));
+    }, [entries, todayKey, closedDays]);
+
+    const groupedHistory = useMemo(() => {
+        const groups = {};
+        entries.forEach(e => {
+            if (!groups[e.date]) groups[e.date] = [];
+            groups[e.date].push(e);
+        });
+        return Object.keys(groups).sort().reverse().map(date => ({
+            date,
+            entries: groups[date].sort((a,b) => b.id - a.id)
+        }));
+    }, [entries]);
+
+    const progreso = useMemo(() => {
+        if (!calcularObjetivo) return null;
+        const objetivo = calcularObjetivo.objetivo;
+        if (objetivo === 0) return { porcentaje: 0, restante: 0, estado: 'sin_objetivo' };
+        const consumido = todayTotals.kcal;
+        const porcentaje = (consumido / objetivo) * 100;
+        let estado = 'deficit'; let color = 'emerald';
+        if (porcentaje > 110) { estado = 'superavit'; color = 'rose'; }
+        else if (porcentaje > 100) { estado = 'equilibrio'; color = 'amber'; }
+        const restante = Math.round(objetivo - consumido);
+        return { porcentaje: Math.min(porcentaje, 150), restante, estado, color, consumido, objetivo };
+    }, [todayTotals.kcal, calcularObjetivo]);
+
+    // ============================================================
+    // LÓGICA DE BÚSQUEDA Y APRENDIZAJE
+    // ============================================================
+    const aplicarResultado = (resultado, origen) => {
+        setCalculatedMacros(resultado);
+        setFormData(prev => ({ ...prev, alimento: resultado.alimento, peso: String(resultado.gramos) }));
+        if (origen === 'voice') { setEditingId(null); setModalOpen(true); }
+        setToast(`✅ "${resultado.alimento}" · ${resultado.gramos} g`);
+    };
+
+    const analyzeLocal = (userText, gramosManual, origen) => {
+        const itemDirecto = buscarAlimento(userText, database);
+        if (itemDirecto) {
+            lastMatchRef.current = itemDirecto;
+            let gramos = (gramosManual && Number(gramosManual) > 0) ? Number(gramosManual) : extraerGramos(userText, itemDirecto).gramos;
+            aplicarResultado(calcularMacrosPorPeso(itemDirecto, gramos), origen);
+            return;
+        }
+        setPendingCustomFood({ alimento: userText, peso: gramosManual || '100', fecha: formData.fecha || todayStr(), origen });
+        setCustomForm({ cal: '', prot: '', carb: '', gras: '' });
+    };
+
+    const guardarAlimentoCustom = () => {
+        const cal = Number(customForm.cal) || 0;
+        if (cal === 0 && !confirm("¿Seguro que quieres guardarlo con 0 calorías?")) return;
+        const customFood = { nombre: pendingCustomFood.alimento, alias: [pendingCustomFood.alimento], cal, prot: Number(customForm.prot) || 0, carb: Number(customForm.carb) || 0, gras: Number(customForm.gras) || 0, unidad: 100 };
+        
+        setDatabase(prev => {
+            const next = [customFood, ...prev]; // Lo añade al principio de la BD
+            localStorage.setItem(DATABASE_KEY, JSON.stringify(next));
+            return next;
+        });
+
+        const gramos = Number(pendingCustomFood.peso) || 100;
+        const resultado = calcularMacrosPorPeso(customFood, gramos);
+        setCalculatedMacros(resultado);
+        setFormData(prev => ({ ...prev, alimento: pendingCustomFood.alimento, peso: String(gramos), fecha: pendingCustomFood.fecha }));
+        setPendingCustomFood(null);
+        if (pendingCustomFood.origen === 'voice' || pendingCustomFood.origen === 'modal') { setEditingId(null); setModalOpen(true); }
+        setToast('✅ Alimento aprendido y añadido a la Base de Datos');
+    };
+
+    // ============================================================
+    //  GESTOR DE BASE DE DATOS
+    // ============================================================
+    const handleOpenNewFood = () => {
+        setFoodForm(EMPTY_FOOD_FORM);
+        setFoodEditingIndex(null);
+        setFoodFormOpen(true);
+    };
+
+    const handleOpenEditFood = (originalIdx) => {
+        const f = database[originalIdx];
+        setFoodForm({
+            nombre: f.nombre,
+            alias: (f.alias || []).filter(a => a.toLowerCase() !== f.nombre.toLowerCase()).join(', '),
+            cal: f.cal, prot: f.prot, carb: f.carb, gras: f.gras, unidad: f.unidad, receta: f.receta || ''
+        });
+        setFoodEditingIndex(originalIdx);
+        setFoodFormOpen(true);
+    };
+
+    const handleDeleteFood = (originalIdx) => {
+        if (!confirm('¿Eliminar este alimento de la base de datos? No se puede deshacer.')) return;
+        setDatabase(prev => {
+            const next = prev.filter((_, i) => i !== originalIdx);
+            localStorage.setItem(DATABASE_KEY, JSON.stringify(next));
+            return next;
+        });
+        setToast('🗑️ Alimento eliminado');
+    };
+
+    const handleSaveFood = (e) => {
+        e.preventDefault();
+        const nombre = foodForm.nombre.trim();
+        if (!nombre) { setToast('⚠️ Ponle un nombre al alimento'); return; }
+        const aliasExtra = foodForm.alias.split(',').map(a => a.trim()).filter(Boolean);
+        const nuevoAlimento = {
+            nombre,
+            alias: [nombre.toLowerCase(), ...aliasExtra],
+            cal: Number(foodForm.cal) || 0,
+            prot: Number(foodForm.prot) || 0,
+            carb: Number(foodForm.carb) || 0,
+            gras: Number(foodForm.gras) || 0,
+            unidad: Number(foodForm.unidad) || 100,
+            receta: foodForm.receta || ''
+        };
+        
+        setDatabase(prev => {
+            let next;
+            if (foodEditingIndex !== null) {
+                next = prev.map((f, i) => i === foodEditingIndex ? nuevoAlimento : f);
+            } else {
+                next = [nuevoAlimento, ...prev.filter(f => f.nombre.toLowerCase() !== nombre.toLowerCase())];
+            }
+            localStorage.setItem(DATABASE_KEY, JSON.stringify(next));
+            return next;
+        });
+        setToast(foodEditingIndex !== null ? '✅ Alimento actualizado' : '✅ Alimento creado');
+        setFoodFormOpen(false);
+    };
+
+    const handleAlimentoChange = (e) => {
+        const val = e.target.value;
+        setFormData({ ...formData, alimento: val });
+        const sugs = obtenerSugerenciasLocales(val, database);
+        setSugerencias(sugs);
+        setShowSugerencias(sugs.length > 0);
+        setCalculatedMacros(null);
+        lastMatchRef.current = null;
+    };
+
+    const handleSelectSugerencia = (alimento) => {
+        setFormData(prev => ({ ...prev, alimento: alimento.nombre }));
+        setShowSugerencias(false);
+        lastMatchRef.current = alimento;
+        const gramos = Number(formData.peso) || 100;
+        setCalculatedMacros(calcularMacrosPorPeso(alimento, gramos));
+        setToast(`✅ Seleccionado: ${alimento.nombre}`);
+    };
+
+    const recalcularPorPeso = (nuevoPeso) => {
+        setFormData(prev => ({ ...prev, peso: nuevoPeso }));
+        const peso = Number(nuevoPeso);
+        if (!peso || peso <= 0) { setCalculatedMacros(null); return; }
+        if (lastMatchRef.current) { setCalculatedMacros(calcularMacrosPorPeso(lastMatchRef.current, peso)); return; }
+        if (calculatedMacros && calculatedMacros.gramos) {
+            const factor = peso / calculatedMacros.gramos;
+            setCalculatedMacros({
+                ...calculatedMacros, calorias: Math.round(calculatedMacros.calorias * factor), proteinas: Math.round(calculatedMacros.proteinas * factor * 10) / 10, carbohidratos: Math.round(calculatedMacros.carbohidratos * factor * 10) / 10, grasas: Math.round(calculatedMacros.grasas * factor * 10) / 10, gramos: Math.round(peso)
+            });
+        }
+    };
+
+    const dictateConceptInModal = () => {
+        if (!isOnline) { setToast('⚠️ Sin conexión a internet'); return; }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) { setToast('⚠️ Tu navegador no soporta voz'); return; }
+        const rec = new SpeechRecognition();
+        rec.lang = 'es-ES'; rec.continuous = false; rec.interimResults = false;
+        rec.onstart = () => setIsListening(true);
+        rec.onerror = () => setIsListening(false);
+        rec.onend = () => setIsListening(false);
+        rec.onresult = (event) => setFormData(prev => ({ ...prev, alimento: event.results[0][0].transcript.trim() }));
+        try { rec.start(); } catch (e) {}
+    };
+
+    // ============================================================
+    // CRUD
+    // ============================================================
+    const handleOpenAdd = () => {
+        setFormData({ ...EMPTY_FORM, fecha: todayStr() });
+        setEditingId(null); setCalculatedMacros(null); lastMatchRef.current = null; setModalOpen(true);
+    };
+
+    const handleOpenEdit = (entry) => {
+        setFormData({ alimento: entry.alimento, peso: String(entry.gramos || 100), fecha: entry.date });
+        setCalculatedMacros({ calorias: entry.calorias, proteinas: entry.proteinas, carbohidratos: entry.carbohidratos, grasas: entry.grasas, gramos: entry.gramos, alimento: entry.alimento });
+        setEditingId(entry.id);
+        lastMatchRef.current = database.find(f => f.nombre.toLowerCase() === entry.alimento.toLowerCase()) || buscarAlimento(entry.alimento, database) || null;
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false); setEditingId(null); setFormData(EMPTY_FORM); setCalculatedMacros(null); lastMatchRef.current = null; setPendingCustomFood(null);
+    };
+
+    const handleSaveEntry = (e) => {
+        e.preventDefault();
+        if (!calculatedMacros && !editingId) {
+            analyzeLocal(formData.alimento, formData.peso, 'modal');
+            return; 
+        }
+
+        let macros = calculatedMacros;
+        if (!macros) {
+            const original = editingId ? entries.find(en => en.id === editingId) : null;
+            macros = original ? { calorias: original.calorias, proteinas: original.proteinas, carbohidratos: original.carbohidratos, grasas: original.grasas, gramos: original.gramos } : { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0, gramos: Number(formData.peso) || 100 };
+        }
+        const newEntry = {
+            id: editingId || Date.now(),
+            date: formData.fecha || todayStr(),
+            hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            alimento: formData.alimento || 'Alimento',
+            calorias: macros.calorias || 0, proteinas: macros.proteinas || 0, carbohidratos: macros.carbohidratos || 0, grasas: macros.grasas || 0, gramos: macros.gramos || Number(formData.peso) || 100,
+        };
+
+        if (editingId) {
+            setEntries(prev => prev.map(en => en.id === editingId ? newEntry : en));
+            setToast('✅ Registro actualizado');
+        } else {
+            setEntries(prev => [...prev, newEntry]);
+            setToast('✅ Registrado');
+        }
+        handleCloseModal();
+    };
+
+    const handleDelete = (id) => { setEntries(prev => prev.filter(en => en.id !== id)); setToast('🗑️ Registro eliminado'); };
+
+    const handleRegistrarPlato = (item) => {
+        if (isTodayClosed) { setToast('⚠️ El día de hoy está cerrado'); return; }
+        const macros = calcularMacrosPorPeso(item, item.unidad);
+        const nuevo = { id: Date.now(), date: todayStr(), hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }), alimento: item.nombre, calorias: macros.calorias, proteinas: macros.proteinas, carbohidratos: macros.carbohidratos, grasas: macros.grasas, gramos: macros.gramos };
+        setEntries(prev => [...prev, nuevo]);
+        setToast(`✅ ${item.nombre} registrado`);
+        setPlatoDetalle(null);
+        setPlatosModalOpen(false);
+    };
+    const handleClearHistory = () => { if (confirm('¿Borrar todo el historial? No se puede deshacer.')) { setEntries([]); setToast('🗑️ Historial borrado'); } };
+    const dismissVoiceGuide = () => { setVoiceGuideShown(true); localStorage.setItem(GUIDE_SHOWN_KEY, 'true'); };
+
+    const [profileForm, setProfileForm] = useState({ sexo: 'hombre', edad: 30, altura: 175, peso: 75, actividad: 1, deficit: 500, modoObjetivo: 'deficit', objetivoDirecto: 2000 });
+    useEffect(() => { if (profile) setProfileForm(profile); }, [profile]);
+    const previewObjetivo = useMemo(() => calcularObjetivoDesde(profileForm), [profileForm]);
+
+    const handleSaveProfile = () => {
+        const perfilLimpio = { sexo: profileForm.sexo, edad: Number(profileForm.edad) || 30, altura: Number(profileForm.altura) || 170, peso: Number(profileForm.peso) || 70, actividad: Number(profileForm.actividad) || 0, deficit: Number(profileForm.deficit) || 0, modoObjetivo: profileForm.modoObjetivo || 'deficit', objetivoDirecto: Number(profileForm.objetivoDirecto) || 0 };
+        saveProfile(perfilLimpio); 
+        setProfile(perfilLimpio);
+        setProfileModalOpen(false);
+        const obj = calcularObjetivoDesde(perfilLimpio);
+        setToast(`✅ Perfil guardado — objetivo: ${Math.round(obj.objetivo)} kcal/día`);
+    };
+
+    const startVoiceRecognition = () => {
+        if (!isOnline) { setToast('⚠️ Sin conexión a internet'); return; }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) { setToast('⚠️ Tu navegador no soporta voz'); return; }
+        const rec = new SpeechRecognition(); recognitionRef.current = rec;
+        rec.lang = 'es-ES'; rec.continuous = false; rec.interimResults = false; rec.maxAlternatives = 1;
+        rec.onstart = () => { setIsListening(true); setToast('🎙️ Escuchando... habla claro'); };
+        rec.onerror = (event) => { setIsListening(false); };
+        rec.onend = () => setIsListening(false);
+        rec.onresult = (event) => analyzeLocal(event.results[0][0].transcript.trim(), null, 'voice');
+        try { rec.start(); } catch (e) { setToast('⚠️ Error al iniciar el micrófono'); }
+    };
+
+    const handleCloseDay = () => {
+        if (isTodayClosed) return;
+        if (todayEntries.length === 0) { setToast('⚠️ No has registrado nada hoy'); return; }
+        if (confirm('¿Cerrar el día de hoy? Ya no podrás añadir más registros a este día.')) { setClosedDays(prev => [...prev, todayKey]); setToast('✅ Día cerrado'); }
+    };
+    const handleReopenDay = () => {
+        if (!isTodayClosed) return;
+        if (confirm('¿Reabrir el día de hoy? Podrás añadir más registros.')) { setClosedDays(prev => prev.filter(d => d !== todayKey)); setToast('✅ Día reabierto'); }
+    };
+
+    return (
+        <div className="space-y-4 animate-fade pb-8">
+            {toast && <div className="toast">{toast}</div>}
+
+            {/* MODAL APRENDER ALIMENTO */}
+            {pendingCustomFood && ReactDOM.createPortal(
+                <div className="confirm-modal">
+                    <div className="confirm-box">
+                        <h3>⚠️ Alimento no reconocido</h3>
+                        <p>No encontré "<strong>{pendingCustomFood.alimento}</strong>". Añade sus valores por cada 100g para agregarlo a tu Base de Datos.</p>
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div><label className="text-[10px] text-slate-400 font-bold uppercase">Kcal / 100g</label><input type="number" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="Ej: 150" value={customForm.cal} onChange={e => setCustomForm({...customForm, cal: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-slate-400 font-bold uppercase">Prot (g)</label><input type="number" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="Ej: 20" value={customForm.prot} onChange={e => setCustomForm({...customForm, prot: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-slate-400 font-bold uppercase">Carbos (g)</label><input type="number" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="0" value={customForm.carb} onChange={e => setCustomForm({...customForm, carb: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-slate-400 font-bold uppercase">Grasas (g)</label><input type="number" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white text-sm focus:border-indigo-500 focus:outline-none" placeholder="0" value={customForm.gras} onChange={e => setCustomForm({...customForm, gras: e.target.value})} /></div>
+                        </div>
+                        <div className="confirm-actions">
+                            <button className="btn-confirm" onClick={guardarAlimentoCustom}>Aprender</button>
+                            <button className="btn-cancel" onClick={() => setPendingCustomFood(null)}>Cancelar</button>
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
+
+            {!voiceGuideShown && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-8 rounded-[2.5rem] w-full max-w-sm shadow-2xl animate-fade text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
+                        <div className="w-20 h-20 mx-auto bg-indigo-500/10 rounded-full flex items-center justify-center mb-5 border border-indigo-500/20"><i className="fa-solid fa-microphone text-4xl text-indigo-400"></i></div>
+                        <h3 className="text-xl font-black text-white mb-2">🎙️ Dicta lo que comes</h3>
+                        <p className="text-sm text-slate-400 mb-4">Sin escribir, solo habla</p>
+                        <div className="bg-black/40 p-4 rounded-2xl border border-white/5 text-left space-y-3 mb-6">
+                            <div className="flex items-center gap-3"><span className="text-indigo-400 text-sm">💬</span><span className="text-slate-300 text-sm">"dos huevos fritos con pan"</span></div>
+                            <div className="flex items-center gap-3"><span className="text-indigo-400 text-sm">💬</span><span className="text-slate-300 text-sm">"un plátano y un café con leche"</span></div>
+                        </div>
+                        <button onClick={dismissVoiceGuide} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">ENTENDIDO</button>
+                    </div>
+                </div>, document.body
+            )}
+
+            {/* HEADER */}
+            <div className="flex justify-between items-center bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md gap-2">
+                <div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="text-lg font-black text-white tracking-tight">Calorímetro</h1>
+                        <span className={`text-[12px] font-bold px-2 py-1 rounded-full ${todayTotals.kcal > 0 ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/20' : 'bg-white/5 text-slate-400'}`}>
+                            Hoy: {Math.round(todayTotals.kcal)} kcal
+                        </span>
+                        {isTodayClosed && <span className="day-closed-badge">🔒 Cerrado</span>}
+                    </div>
+                    <p className="text-[12px] text-slate-400 uppercase tracking-widest mt-0.5">{isOnline ? 'Listo para escuchar' : 'Sin conexión'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => setPlatosModalOpen(true)} className="theme-toggle" title="Platos combinados"><i className="fa-solid fa-utensils"></i></button>
+                    <button onClick={() => setManageFoodsOpen(true)} className="theme-toggle" title="Base de datos de alimentos"><i className="fa-solid fa-database"></i></button>
+                    <button onClick={() => setHistoryModalOpen(true)} className="theme-toggle" title="Historial detallado"><i className="fa-solid fa-clock-rotate-left"></i></button>
+                    <button onClick={() => setProfileModalOpen(true)} className="theme-toggle" title="Perfil"><i className="fa-solid fa-user"></i></button>
+                    <button onClick={toggleTheme} className="theme-toggle" title="Cambiar tema"><i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}`}></i></button>
+                </div>
+            </div>
+
+            {/* RESUMEN PROGRESO */}
+            {calcularObjetivo && !isTodayClosed ? (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-5 space-y-3">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-white">🎯 Objetivo diario</span>
+                        <span className="text-sm font-black text-indigo-400">{Math.round(calcularObjetivo.objetivo)} kcal</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-400">Consumido: <strong className="text-white">{Math.round(todayTotals.kcal)} kcal</strong></span>
+                        <span className={`font-bold ${progreso.restante >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{progreso.restante >= 0 ? `Restan ${progreso.restante} kcal` : `Exceso ${Math.abs(progreso.restante)} kcal`}</span>
+                    </div>
+                    <div className="progress-bar"><div className={`progress-fill bg-${progreso.color}-500`} style={{ width: `${Math.min(progreso.porcentaje, 100)}%` }}></div></div>
+                    <div className="flex justify-between items-center text-sm pt-1">
+                        <span className="text-slate-400">Estado:</span>
+                        <span className={`font-black ${progreso.estado === 'deficit' ? 'text-emerald-400' : progreso.estado === 'equilibrio' ? 'text-amber-400' : 'text-rose-400'}`}>
+                            {progreso.estado === 'deficit' && '✅ En déficit'}
+                            {progreso.estado === 'equilibrio' && '⚠️ En el límite'}
+                            {progreso.estado === 'superavit' && '🔴 Objetivo superado'}
+                            {progreso.estado === 'sin_objetivo' && 'Objetivo no definido'}
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/5">
+                        <div className="text-center"><div className="text-emerald-400 font-black text-sm">{Math.round(todayTotals.prot)}g</div><div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Proteína</div></div>
+                        <div className="text-center"><div className="text-amber-400 font-black text-sm">{Math.round(todayTotals.carb)}g</div><div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Carbos</div></div>
+                        <div className="text-center"><div className="text-rose-400 font-black text-sm">{Math.round(todayTotals.fat)}g</div><div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Grasa</div></div>
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-5 text-center">
+                    <p className="text-sm text-slate-400">{isTodayClosed ? '🔒 Día cerrado' : 'Configura tu perfil para ver tu objetivo'}</p>
+                </div>
+            )}
+
+            {/* BOTÓN VOZ */}
+            <div className="flex flex-col items-center gap-3 py-2">
+                <button onClick={startVoiceRecognition} disabled={!isOnline || isTodayClosed} className={`mic-hero w-24 h-24 rounded-full flex items-center justify-center text-3xl shadow-2xl border ${isListening ? 'active bg-rose-500/30 border-rose-500/50 text-rose-400' : isOnline && !isTodayClosed ? 'bg-indigo-600 border-indigo-400/30 text-white hover:bg-indigo-500' : 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'}`}><i className={`fa-solid ${isListening ? 'fa-circle-stop' : 'fa-microphone'}`}></i></button>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{isTodayClosed ? 'Día cerrado' : (isListening ? 'Escuchando...' : 'Toca y describe qué comiste')}</p>
+                <button onClick={handleOpenAdd} disabled={isTodayClosed} className="text-[12px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 disabled:opacity-50"><i className="fa-solid fa-plus"></i> Añadir manual</button>
+            </div>
+
+            {/* HISTORIAL HOY */}
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Registrado hoy {isTodayClosed && ' (cerrado)'}</h3>
+                <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                    {todayEntries.length === 0 && <p className="text-slate-400 text-xs text-center py-4">Aún no has registrado nada hoy.</p>}
+                    {todayEntries.map((entry, idx) => (
+                        <div key={entry.id} className="entry-enter p-3 rounded-xl bg-black/40 border border-white/5 text-xs" style={{ animationDelay: `${idx * 0.05}s` }}>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <p className="font-bold text-white">{entry.alimento}</p>
+                                    <p className="text-[12px] text-slate-400 mt-0.5">{entry.hora} · {Math.round(entry.proteinas)}p / {Math.round(entry.carbohidratos)}c / {Math.round(entry.grasas)}g</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="font-black text-indigo-400">{Math.round(entry.calorias)} kcal</span>
+                                    {!isTodayClosed && (
+                                        <div className="flex gap-1">
+                                            <button onClick={() => handleOpenEdit(entry)} className="text-slate-400 hover:text-indigo-400 p-1"><i className="fa-solid fa-pen text-xs"></i></button>
+                                            <button onClick={() => handleDelete(entry.id)} className="text-slate-400 hover:text-rose-400 p-1"><i className="fa-solid fa-trash text-xs"></i></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                {!isTodayClosed && todayEntries.length > 0 && <button onClick={handleCloseDay} className="mt-4 w-full py-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-xl font-bold text-xs transition-all active:scale-95">✅ Cerrar día</button>}
+                {isTodayClosed && <button onClick={handleReopenDay} className="mt-4 w-full py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 border border-indigo-500/30 rounded-xl font-bold text-xs transition-all active:scale-95">🔓 Reabrir día</button>}
+            </div>
+
+            {/* DÍAS ANTERIORES - RESUMEN RÁPIDO */}
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-5">
+                <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Días anteriores</h3>
+                    <button onClick={() => setHistoryModalOpen(true)} className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                        Ver todo <i className="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div className="space-y-2">
+                    {pastDays.length === 0 && <p className="text-slate-400 text-xs text-center py-2">Sin registros anteriores.</p>}
+                    {pastDays.slice(0, 5).map(d => (
+                        <div key={d.date} className="flex justify-between items-center px-3 py-2.5 rounded-xl bg-black/30 text-xs">
+                            <span className="text-slate-300 font-semibold">{formatFechaAmigable(d.date)}</span>
+                            <span className="text-indigo-400 font-black">{Math.round(d.kcal)} kcal</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* PIE */}
+            <div className="mt-2 flex justify-center pb-2">
+                <button onClick={() => setShowCreator(true)} className="flex flex-col items-center gap-2 text-slate-600 hover:text-indigo-400 transition-colors group">
+                    <i className="fa-solid fa-fingerprint text-xl group-hover:scale-110 transition-transform"></i>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Creador</span>
+                </button>
+            </div>
+
+            <button onClick={() => setShowGuide(true)} className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xl flex items-center justify-center transition-colors"><i className="fa-solid fa-circle-question text-xl"></i></button>
+
+            {/* MODAL AÑADIR/EDITAR */}
+            {modalOpen && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-black text-white">{editingId ? 'Editar Registro' : 'Añadir Comida'}</h3>
+                            <button onClick={handleCloseModal} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onSubmit={handleSaveEntry} className="space-y-3">
+                            <div>
+                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Alimento</label>
+                                <div className="flex gap-2 items-center">
+                                    <div className="relative flex-1">
+                                        <input ref={inputRef} type="text" value={formData.alimento} onChange={handleAlimentoChange} onFocus={() => { if(sugerencias.length > 0) setShowSugerencias(true) }} onBlur={() => setTimeout(() => setShowSugerencias(false), 200)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="Ej: pechuga de pollo" required />
+                                        {showSugerencias && (
+                                            <ul className="absolute left-0 right-0 top-full mt-1 bg-[#0f111a] border border-white/10 rounded-xl z-50 max-h-48 overflow-y-auto shadow-2xl custom-scrollbar overflow-hidden">
+                                                {sugerencias.map((sug, idx) => (
+                                                    <li key={idx} onClick={() => handleSelectSugerencia(sug)} className="p-3 text-sm text-white hover:bg-indigo-500/30 cursor-pointer border-b border-white/5 last:border-0 flex justify-between items-center transition-colors">
+                                                        <span className="font-bold">{sug.nombre}</span><span className="text-indigo-400 font-black text-xs">{sug.cal} <span className="text-[10px] font-normal text-slate-400">kcal</span></span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                    <button type="button" onClick={dictateConceptInModal} disabled={!isOnline} className={`mic-btn p-3 rounded-xl border transition-all flex-shrink-0 relative ${isListening ? 'active bg-rose-500/20 border-rose-500/50 text-rose-400' : isOnline ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/30' : 'bg-slate-700/50 border-slate-600/30 text-slate-400 cursor-not-allowed'}`}><i className={`fa-solid ${isListening ? 'fa-circle-stop' : 'fa-microphone'}`}></i></button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Peso (g)</label>
+                                <input type="number" inputMode="numeric" value={formData.peso} onChange={e => recalcularPorPeso(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="100" />
+                            </div>
+                            <div>
+                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Fecha</label>
+                                <input type="date" value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" required />
+                            </div>
+                            {calculatedMacros && (
+                                <div className="bg-black/40 p-3 rounded-xl border border-white/5 text-sm">
+                                    <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mb-1">📊 Macros calculados</p>
+                                    <div className="grid grid-cols-4 gap-2 text-center">
+                                        <div><span className="text-white font-black">{calculatedMacros.calorias}</span> <span className="text-slate-400 text-[10px]">kcal</span></div>
+                                        <div><span className="text-emerald-400 font-black">{calculatedMacros.proteinas}g</span> <span className="text-slate-400 text-[10px]">prot</span></div>
+                                        <div><span className="text-amber-400 font-black">{calculatedMacros.carbohidratos}g</span> <span className="text-slate-400 text-[10px]">carb</span></div>
+                                        <div><span className="text-rose-400 font-black">{calculatedMacros.grasas}g</span> <span className="text-slate-400 text-[10px]">gras</span></div>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex gap-2 mt-2">
+                                <button type="submit" className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">{editingId ? 'ACTUALIZAR' : 'GUARDAR'}</button>
+                                <button type="button" onClick={handleCloseModal} className="py-3.5 px-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-sm transition-all active:scale-95">CANCELAR</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>, document.body
+            )}
+
+            {/* MODAL HISTORIAL COMPLETO Y DETALLADO */}
+            {historyModalOpen && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-md shadow-2xl animate-fade max-h-[85vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-4 shrink-0">
+                            <h3 className="text-base font-black text-white">🕒 Historial Completo</h3>
+                            <button onClick={() => setHistoryModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar pr-2 space-y-5">
+                            {groupedHistory.length === 0 && <p className="text-slate-400 text-xs text-center py-6">Aún no hay registros en tu historial.</p>}
+                            {groupedHistory.map(group => (
+                                <div key={group.date}>
+                                    <h4 className="text-indigo-400 font-black text-xs uppercase tracking-wider mb-2 pb-1 border-b border-white/5 flex justify-between">
+                                        <span>{formatFechaAmigable(group.date)}</span>
+                                        <span>{Math.round(group.entries.reduce((sum, e) => sum + e.calorias, 0))} kcal</span>
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {group.entries.map(entry => (
+                                            <div key={entry.id} className="p-3 rounded-xl bg-black/40 border border-white/5 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex-1">
+                                                        <p className="font-bold text-white">{entry.alimento}</p>
+                                                        <p className="text-[11px] text-slate-400 mt-0.5">{entry.hora} · {Math.round(entry.proteinas)}p / {Math.round(entry.carbohidratos)}c / {Math.round(entry.grasas)}g</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-black text-indigo-400">{Math.round(entry.calorias)}</span>
+                                                        <div className="flex gap-1">
+                                                            <button onClick={() => { handleOpenEdit(entry); setHistoryModalOpen(false); }} className="text-slate-400 hover:text-indigo-400 p-1.5"><i className="fa-solid fa-pen text-xs"></i></button>
+                                                            <button onClick={() => handleDelete(entry.id)} className="text-slate-400 hover:text-rose-400 p-1.5"><i className="fa-solid fa-trash text-xs"></i></button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {entries.length > 0 && (
+                            <button onClick={handleClearHistory} className="mt-4 shrink-0 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs transition-all active:scale-95 w-full">
+                                <i className="fa-solid fa-trash mr-2"></i> Borrar Todo el Historial
+                            </button>
+                        )}
+                    </div>
+                </div>, document.body
+            )}
+
+            {/* MODAL PERFIL */}
+            {profileModalOpen && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-black text-white">👤 Perfil</h3>
+                            <button onClick={() => setProfileModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }} className="space-y-3">
+                            <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Sexo</label><select value={profileForm.sexo} onChange={e => setProfileForm({ ...profileForm, sexo: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500"><option value="hombre">Hombre</option><option value="mujer">Mujer</option></select></div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Edad (años)</label><input type="number" inputMode="numeric" value={profileForm.edad} onChange={e => setProfileForm({ ...profileForm, edad: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" min="10" max="120" /></div>
+                                <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Altura (cm)</label><input type="number" inputMode="numeric" value={profileForm.altura} onChange={e => setProfileForm({ ...profileForm, altura: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" min="100" max="250" /></div>
+                            </div>
+                            <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Peso (kg)</label><input type="number" inputMode="numeric" value={profileForm.peso} onChange={e => setProfileForm({ ...profileForm, peso: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" min="30" max="300" /></div>
+                            <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Nivel de actividad</label><select value={profileForm.actividad} onChange={e => setProfileForm({ ...profileForm, actividad: Number(e.target.value) })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500"><option value="0">Sedentario (poco o nada de ejercicio)</option><option value="1">Ligero (1-3 días/semana)</option><option value="2">Moderado (3-5 días/semana)</option><option value="3">Activo (6-7 días/semana)</option><option value="4">Muy activo (ejercicio intenso diario)</option></select></div>
+                            {previewObjetivo && (<p className="text-[11px] text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">Tu mantenimiento estimado (lo que quemas al día): <span className="text-white font-bold">{Math.round(previewObjetivo.get)} kcal</span></p>)}
+                            <div>
+                                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">¿Cómo quieres fijar tu objetivo?</label>
+                                <div className="flex gap-2">
+                                    <button type="button" onClick={() => setProfileForm({ ...profileForm, modoObjetivo: 'deficit' })} className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${(profileForm.modoObjetivo || 'deficit') === 'deficit' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>Por déficit</button>
+                                    <button type="button" onClick={() => setProfileForm({ ...profileForm, modoObjetivo: 'directo' })} className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${profileForm.modoObjetivo === 'directo' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>Objetivo directo</button>
+                                </div>
+                            </div>
+                            {(profileForm.modoObjetivo || 'deficit') === 'deficit' ? (
+                                <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Déficit respecto a tu mantenimiento (kcal/día)</label><input type="number" inputMode="numeric" value={profileForm.deficit} onChange={e => setProfileForm({ ...profileForm, deficit: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" min="0" step="50" /><p className="text-[10px] text-slate-400 mt-1">Recomendado: 500 kcal para perder ~0.5 kg/semana.</p></div>
+                            ) : (
+                                <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Cuántas kcal quieres comer al día</label><input type="number" inputMode="numeric" value={profileForm.objetivoDirecto} onChange={e => setProfileForm({ ...profileForm, objetivoDirecto: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" min="0" step="50" placeholder="Ej: 2000" /><p className="text-[10px] text-slate-400 mt-1">Este es tu objetivo tal cual.</p></div>
+                            )}
+                            {previewObjetivo && (<p className="text-xs font-bold text-indigo-400 mt-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-3 py-2">🎯 Con estos datos, tu objetivo sería: {Math.round(previewObjetivo.objetivo)} kcal/día</p>)}
+                            <div className="flex gap-2 mt-2">
+                                <button type="submit" className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">GUARDAR PERFIL</button>
+                                <button type="button" onClick={() => setProfileModalOpen(false)} className="py-3.5 px-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-sm transition-all active:scale-95">CANCELAR</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>, document.body
+            )}
+
+            {/* MODAL BASE DE DATOS (ANTIGUO MIS ALIMENTOS) */}
+            {manageFoodsOpen && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-md shadow-2xl animate-fade max-h-[85vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-4 shrink-0">
+                            <h3 className="text-base font-black text-white">🗂️ Base de Datos</h3>
+                            <button onClick={() => setManageFoodsOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        
+                        <div className="shrink-0 space-y-3 mb-3">
+                            <button onClick={handleOpenNewFood} className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                                <i className="fa-solid fa-plus"></i> NUEVO ALIMENTO
+                            </button>
+                            <div className="relative">
+                                <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" placeholder="Buscar alimento..." value={dbSearch} onChange={(e) => setDbSearch(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-3 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                            </div>
+                            <p className="text-[11px] text-slate-400 text-center">
+                                Controlas {database.length} alimentos. Tienes el poder absoluto sobre tu catálogo.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2 overflow-y-auto custom-scrollbar pr-1 pb-4">
+                            {database.map((f, originalIdx) => {
+                                if (dbSearch && !f.nombre.toLowerCase().includes(dbSearch.toLowerCase())) return null;
+                                return (
+                                    <div key={f.nombre + originalIdx} className="p-3 rounded-xl bg-black/40 border border-white/5 text-xs">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="font-bold text-white">{f.nombre}</p>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">{f.cal} kcal · {f.prot}p / {f.carb}c / {f.gras}g · por {f.unidad}g</p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => handleOpenEditFood(originalIdx)} className="text-slate-400 hover:text-indigo-400 p-2"><i className="fa-solid fa-pen text-xs"></i></button>
+                                                <button onClick={() => handleDeleteFood(originalIdx)} className="text-slate-400 hover:text-rose-400 p-2"><i className="fa-solid fa-trash text-xs"></i></button>
+                                            </div>
+                                        </div>
+                                        {f.receta && <p className="text-[10px] text-slate-400 mt-2 italic border-t border-white/5 pt-2">{f.receta}</p>}
+                                    </div>
+                                );
+                            })}
+                            
+                            <div className="pt-6 pb-2 text-center">
+                                <button onClick={() => {
+                                    if (confirm('¿Restaurar la base de datos de fábrica? Se perderán TODOS los alimentos que hayas añadido o modificado.')) {
+                                        setDatabase(INITIAL_FOOD_DB);
+                                        localStorage.setItem(DATABASE_KEY, JSON.stringify(INITIAL_FOOD_DB));
+                                        setDbSearch('');
+                                        setToast('✅ Base de datos restaurada');
+                                    }
+                                }} className="text-[10px] text-rose-400 font-bold uppercase tracking-wider hover:underline">
+                                    Restaurar Fábrica
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
+
+            {/* MODAL CREAR/EDITAR ALIMENTO */}
+            {foodFormOpen && ReactDOM.createPortal(
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-[80] p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-black text-white">{foodEditingIndex !== null ? 'Editar alimento' : 'Nuevo alimento'}</h3>
+                            <button onClick={() => setFoodFormOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <form onSubmit={handleSaveFood} className="space-y-3">
+                            <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Nombre</label><input type="text" value={foodForm.nombre} onChange={e => setFoodForm({ ...foodForm, nombre: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="Ej: Potaje de berros" required /></div>
+                            <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Alias (opcional, separados por coma)</label><input type="text" value={foodForm.alias} onChange={e => setFoodForm({ ...foodForm, alias: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="Ej: potaje, potaje canario" /><p className="text-[10px] text-slate-400 mt-1">Ayuda a la voz a encontrarlo aunque lo digas distinto.</p></div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Calorías /100g</label><input type="number" inputMode="numeric" value={foodForm.cal} onChange={e => setFoodForm({ ...foodForm, cal: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="0" required /></div>
+                                <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Ración típica (g)</label><input type="number" inputMode="numeric" value={foodForm.unidad} onChange={e => setFoodForm({ ...foodForm, unidad: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="100" /></div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                <div><label className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest mb-1 block">Prot. /100g</label><input type="number" inputMode="numeric" value={foodForm.prot} onChange={e => setFoodForm({ ...foodForm, prot: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-emerald-500" placeholder="0" /></div>
+                                <div><label className="text-[11px] font-bold text-amber-400 uppercase tracking-widest mb-1 block">Carb. /100g</label><input type="number" inputMode="numeric" value={foodForm.carb} onChange={e => setFoodForm({ ...foodForm, carb: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-amber-500" placeholder="0" /></div>
+                                <div><label className="text-[11px] font-bold text-rose-400 uppercase tracking-widest mb-1 block">Grasa /100g</label><input type="number" inputMode="numeric" value={foodForm.gras} onChange={e => setFoodForm({ ...foodForm, gras: e.target.value })} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-rose-500" placeholder="0" /></div>
+                            </div>
+                            <div><label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Receta / notas (opcional)</label><textarea value={foodForm.receta} onChange={e => setFoodForm({ ...foodForm, receta: e.target.value })} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500 resize-none" placeholder="Ej: 150g pechuga, 100g arroz..."></textarea></div>
+                            <div className="flex gap-2 mt-2">
+                                <button type="submit" className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">{foodEditingIndex !== null ? 'ACTUALIZAR' : 'GUARDAR'}</button>
+                                <button type="button" onClick={() => setFoodFormOpen(false)} className="py-3.5 px-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-sm transition-all active:scale-95">CANCELAR</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>, document.body
+            )}
+
+            {/* MODAL PLATOS COMBINADOS Y EL RESTO IGUAL... */}
+            {platosModalOpen && ReactDOM.createPortal(
+                <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-md shadow-2xl animate-fade max-h-[85vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-1 shrink-0">
+                            <h3 className="text-base font-black text-white">🍽️ Platos combinados</h3>
+                            <button onClick={() => setPlatosModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mb-3 shrink-0">Toca un plato para ver su receta, ingredientes y calorías.</p>
+                        <div className="space-y-2 overflow-y-auto custom-scrollbar pr-1">
+                            {PLATOS_COMBINADOS.map(item => (
+                                <button key={item.nombre} onClick={() => setPlatoDetalle(item)} className="w-full text-left p-3 rounded-xl bg-black/40 border border-white/5 text-xs hover:border-indigo-500/30 transition-colors">
+                                    <div className="flex justify-between items-center"><p className="font-bold text-white pr-2">{item.nombre}</p><span className="font-black text-indigo-400 whitespace-nowrap">{Math.round(item.cal * item.unidad / 100)} kcal</span></div>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">Ración: {item.unidad}g</p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
+
+            {platoDetalle && ReactDOM.createPortal(
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-[80] p-0 sm:p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade max-h-[85vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-3 shrink-0">
+                            <h3 className="text-base font-black text-white pr-2">{platoDetalle.nombre}</h3>
+                            <button onClick={() => setPlatoDetalle(null)} className="text-slate-400 hover:text-white transition-colors p-1 shrink-0"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar pr-1 space-y-4">
+                            <div className="grid grid-cols-4 gap-2">
+                                <div className="bg-black/40 rounded-xl p-2 text-center"><div className="font-black text-indigo-400 text-sm">{Math.round(platoDetalle.cal * platoDetalle.unidad / 100)}</div><div className="text-[9px] text-slate-400 uppercase">kcal</div></div>
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 text-center"><div className="font-black text-emerald-400 text-sm">{Math.round(platoDetalle.prot * platoDetalle.unidad / 100)}g</div><div className="text-[9px] text-slate-400 uppercase">Prot</div></div>
+                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-2 text-center"><div className="font-black text-amber-400 text-sm">{Math.round(platoDetalle.carb * platoDetalle.unidad / 100)}g</div><div className="text-[9px] text-slate-400 uppercase">Carb</div></div>
+                                <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-2 text-center"><div className="font-black text-rose-400 text-sm">{Math.round(platoDetalle.gras * platoDetalle.unidad / 100)}g</div><div className="text-[9px] text-slate-400 uppercase">Grasa</div></div>
+                            </div>
+                            <p className="text-[10px] text-slate-400 -mt-2">Para una ración de {platoDetalle.unidad}g. Los valores por 100g están en el catálogo.</p>
+                            {RECIPES[platoDetalle.nombre] && (
+                                <>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <span className="text-[10px] font-bold bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-slate-300"><i className="fa-regular fa-clock mr-1"></i>Prep: {RECIPES[platoDetalle.nombre].tiempoPrep}</span>
+                                        <span className="text-[10px] font-bold bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-slate-300"><i className="fa-solid fa-fire mr-1"></i>Cocción: {RECIPES[platoDetalle.nombre].tiempoCoccion}</span>
+                                        <span className="text-[10px] font-bold bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-slate-300"><i className="fa-solid fa-gauge mr-1"></i>{RECIPES[platoDetalle.nombre].dificultad}</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Ingredientes (para {platoDetalle.unidad}g de ración)</h4>
+                                        <div className="space-y-1.5">
+                                            {RECIPES[platoDetalle.nombre].ingredientes.map((ing, i) => (
+                                                <div key={i} className="flex justify-between text-xs bg-black/30 rounded-lg px-3 py-2"><span className="text-slate-300">{ing.nombre}</span><span className="text-white font-bold">{ing.gramos} g</span></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-2">Elaboración</h4>
+                                        <ol className="space-y-2.5">
+                                            {RECIPES[platoDetalle.nombre].pasos.map((paso, i) => (
+                                                <li key={i} className="flex gap-2.5 text-xs text-slate-300 leading-relaxed"><span className="shrink-0 w-5 h-5 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 font-black flex items-center justify-center text-[10px]">{i + 1}</span><span>{paso}</span></li>
+                                            ))}
+                                        </ol>
+                                    </div>
+                                </>
+                            )}
+                            <button onClick={() => handleRegistrarPlato(platoDetalle)} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all shadow-lg active:scale-95">REGISTRAR ESTE PLATO</button>
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
+
+            {showCreator && ReactDOM.createPortal(
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+                    <div className="bg-[#0f111a] border border-white/10 p-8 rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500"></div>
+                        <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 shadow-[0_0_35px_rgba(99,102,241,0.35)]" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 55%, #10b981 100%)' }}><svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2c-.6 2.4-2.2 3.7-3.5 5.2C7 9 6 10.7 6 13a6 6 0 0 0 12 0c0-2.6-1.4-4.4-2.6-6-.4.9-1 1.7-1.8 2.1.2-2.6-.6-4.8-1.6-7.1Z" fill="white"/><path d="M12 20a4 4 0 0 1-4-4c0-1.4.7-2.3 1.5-3.2.2 1 .8 1.7 1.6 2 0-1.3.4-2.3 1-3.3.7 1.1 1.9 2 1.9 3.5a4 4 0 0 1-2 4Z" fill="#0f111a" opacity="0.55"/></svg></div>
+                        <h3 className="text-xl font-black text-white mb-2">Calorímetro</h3>
+                        <p className="text-sm text-slate-400 mb-6 leading-relaxed">Software de conteo calórico desarrollado y diseñado exclusivamente por <br/><strong className="text-white">Jonathan Pérez Galán</strong>.</p>
+                        <button onClick={() => setShowCreator(false)} className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-xs transition-all">CERRAR</button>
+                    </div>
+                </div>, document.body
+            )}
+
+            {showGuide && ReactDOM.createPortal(
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+                    <div className="bg-[#0f111a] border border-white/10 rounded-[2rem] w-full max-w-2xl shadow-2xl animate-fade max-h-[85vh] flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-center px-6 pt-6 pb-4 border-b border-white/10 shrink-0">
+                            <h3 className="text-lg font-black text-white flex items-center gap-2"><i className="fa-solid fa-circle-question text-indigo-400"></i> Guía de Usuario</h3>
+                            <button onClick={() => setShowGuide(false)} className="text-slate-400 p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <div className="flex gap-2 px-6 pt-4 flex-wrap shrink-0">
+                            {[{ id: 'voz', label: 'Voz', icon: 'fa-microphone' }, { id: 'historial', label: 'Historial', icon: 'fa-clock-rotate-left' }, { id: 'perfil', label: 'Perfil', icon: 'fa-user' }, { id: 'alimentos', label: 'Base de Datos', icon: 'fa-database' }].map(t => (
+                                <button key={t.id} onClick={() => setGuideTab(t.id)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${guideTab === t.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}><i className={`fa-solid ${t.icon}`}></i> {t.label}</button>
+                            ))}
+                        </div>
+                        <div className="px-6 py-5 overflow-y-auto custom-scrollbar text-sm text-slate-300 leading-relaxed space-y-3">
+                            {guideTab === 'voz' && (<><h4 className="text-white font-black text-base">Cómo dictar tu comida</h4><p>Toca el micrófono grande y describe lo que has comido, indicando la cantidad: <span className="text-white font-bold">"200 gramos de pechuga de pollo"</span>.</p></>)}
+                            {guideTab === 'historial' && (<><h4 className="text-white font-black text-base">Historial Detallado</h4><p>Usa el icono del reloj en la barra superior para ver todos tus registros antiguos organizados por día. Desde ahí puedes modificarlos o borrarlos fácilmente.</p></>)}
+                            {guideTab === 'perfil' && (<><h4 className="text-white font-black text-base">Perfil y objetivo</h4><p>Configura tu perfil para fijar tu objetivo calórico diario y llevar tu control desde la pantalla inicial.</p></>)}
+                            {guideTab === 'alimentos' && (<><h4 className="text-white font-black text-base">Gestor de Base de Datos</h4><p>El icono de discos de la cabecera te lleva a tu catálogo completo. Todo es editable, incluso los alimentos de fábrica. Tienes un buscador en la parte superior y un botón para restaurar de fábrica al final.</p></>)}
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
+        </div>
+    );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

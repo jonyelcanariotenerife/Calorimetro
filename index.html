@@ -68,6 +68,8 @@
         .theme-toggle:hover { background: rgba(255,255,255,0.1); }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; height: 100dvh; }
         .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f111a; border: 1px solid rgba(255,255,255,0.1); padding: 12px 24px; border-radius: 16px; font-weight: 700; font-size: 0.8rem; z-index: 100; animation: fadeIn 0.3s ease-out; backdrop-filter: blur(8px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); max-width: 90vw; text-align: center; }
+        .toast-undo { display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 20px; }
+        .undo-btn { background: rgba(99,102,241,0.25); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.4); border-radius: 10px; padding: 6px 12px; font-weight: 900; font-size: 0.7rem; letter-spacing: 0.03em; cursor: pointer; white-space: nowrap; }
         .mic-btn { transition: all 0.3s ease; }
         .mic-btn.active { background: rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.5); animation: pulse 1s ease-in-out infinite; }
         .mic-hero { transition: all 0.25s ease; }
@@ -100,6 +102,8 @@ const THEME_KEY = 'calorimetro_theme';
 const GUIDE_SHOWN_KEY = 'calorimetro_voice_guide_shown';
 const PROFILE_KEY = 'calorimetro_profile';
 const CLOSED_DAYS_KEY = 'calorimetro_closed_days';
+const PESO_HISTORIAL_KEY = 'calorimetro_peso_historial';
+const LAST_EXPORT_KEY = 'calorimetro_last_export';
 const CUSTOM_FOODS_KEY = 'calorimetro_custom_foods';
 
 // Recetas aproximadas para los platos combinados del catálogo
@@ -1297,6 +1301,10 @@ const loadEntries = () => { try { const s = localStorage.getItem(STORAGE_KEY); i
 const saveEntries = (list) => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {} };
 const loadProfile = () => { try { const s = localStorage.getItem(PROFILE_KEY); if (s) return JSON.parse(s); } catch(e) {} return null; };
 const saveProfile = (profile) => { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch(e) {} };
+const loadPesoHistorial = () => { try { const s = localStorage.getItem(PESO_HISTORIAL_KEY); if (s) return JSON.parse(s); } catch(e) {} return []; };
+const savePesoHistorial = (list) => { try { localStorage.setItem(PESO_HISTORIAL_KEY, JSON.stringify(list)); } catch(e) {} };
+const getLastExport = () => { try { return localStorage.getItem(LAST_EXPORT_KEY); } catch(e) { return null; } };
+const setLastExport = (iso) => { try { localStorage.setItem(LAST_EXPORT_KEY, iso); } catch(e) {} };
 const loadClosedDays = () => { try { const s = localStorage.getItem(CLOSED_DAYS_KEY); if (s) return JSON.parse(s); } catch(e) {} return []; };
 const saveClosedDays = (days) => { try { localStorage.setItem(CLOSED_DAYS_KEY, JSON.stringify(days)); } catch(e) {} };
 const todayStr = () => fechaLocalStr();
@@ -1333,6 +1341,10 @@ const App = () => {
     const [voiceGuideShown, setVoiceGuideShown] = useState(() => localStorage.getItem(GUIDE_SHOWN_KEY) === 'true');
     const [profile, setProfile] = useState(() => loadProfile());
     const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [profileTab, setProfileTab] = useState('datos');
+    const [pesoHistorial, setPesoHistorial] = useState(() => loadPesoHistorial());
+    const [pesoHoyInput, setPesoHoyInput] = useState('');
+    const [pendingUndo, setPendingUndo] = useState(null); // { message, onUndo, timeoutId }
     const [closedDays, setClosedDays] = useState(() => loadClosedDays());
     const [calculatedMacros, setCalculatedMacros] = useState(null);
     
@@ -1353,6 +1365,7 @@ const App = () => {
         return PLATOS_COMBINADOS.filter(f => RECIPES[f.nombre].tipo === filtroTipoPlato);
     }, [PLATOS_COMBINADOS, filtroTipoPlato]);
     const [pendingCustomFood, setPendingCustomFood] = useState(null);
+    const [multiPendientes, setMultiPendientes] = useState(null);
     const [customForm, setCustomForm] = useState({ cal: '', prot: '', carb: '', gras: '' });
 
     // Gestor de alimentos ("Mis alimentos"): crear/editar/ocultar sobre TODO el
@@ -1377,6 +1390,20 @@ const App = () => {
     }, [theme]);
 
     useEffect(() => { saveEntries(entries); }, [entries]);
+
+    // Aviso discreto de backup: solo si ya hay algo que perder y hace tiempo
+    // que no exportas (o nunca lo has hecho). Una vez por sesión, no insiste.
+    useEffect(() => {
+        if (entries.length < 5) return; // no molestar si apenas hay datos
+        const last = getLastExport();
+        const dias = last ? (Date.now() - new Date(last).getTime()) / 86400000 : Infinity;
+        if (dias >= 14) {
+            const timer = setTimeout(() => {
+                setToast(last ? `💾 Llevas ${Math.floor(dias)} días sin hacer backup` : '💾 Nunca has hecho un backup de tus datos');
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (profile) saveProfile(profile); }, [profile]);
     useEffect(() => { saveClosedDays(closedDays); }, [closedDays]);
     useEffect(() => {
@@ -1738,7 +1765,17 @@ const App = () => {
         handleCloseModal();
     };
 
-    const handleDelete = (id) => { setEntries(prev => prev.filter(en => en.id !== id)); setToast('🗑️ Registro eliminado'); };
+    const handleDelete = (id) => {
+        const entryBorrado = entries.find(en => en.id === id);
+        if (!entryBorrado) return;
+        setEntries(prev => prev.filter(en => en.id !== id));
+        const timeoutId = setTimeout(() => setPendingUndo(null), 5000);
+        setPendingUndo({
+            message: `🗑️ "${entryBorrado.alimento}" eliminado`,
+            onUndo: () => setEntries(prev => [...prev, entryBorrado]),
+            timeoutId
+        });
+    };
 
     const handleRegistrarPlato = (item) => {
         if (isTodayClosed) { setToast('⚠️ El día de hoy está cerrado'); return; }
@@ -1763,7 +1800,7 @@ const App = () => {
     const handleExportarDatos = () => {
         const backup = {
             app: 'Calorímetro', version: 2, exportadoEl: new Date().toISOString(),
-            entries, profile, customFoods, hiddenFoods, closedDays,
+            entries, profile, customFoods, hiddenFoods, closedDays, pesoHistorial,
         };
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1775,6 +1812,7 @@ const App = () => {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        setLastExport(new Date().toISOString());
         setToast('✅ Backup descargado');
     };
 
@@ -1809,6 +1847,13 @@ const App = () => {
                 if (Array.isArray(data.closedDays)) {
                     const union = Array.from(new Set([...closedDays, ...data.closedDays]));
                     setClosedDays(union);
+                }
+                // Peso: se combina por fecha (el importado gana en empate del mismo día).
+                if (Array.isArray(data.pesoHistorial)) {
+                    const propios = pesoHistorial.filter(p => !data.pesoHistorial.some(imp => imp.fecha === p.fecha));
+                    const combinado = [...propios, ...data.pesoHistorial].sort((a, b) => a.fecha.localeCompare(b.fecha));
+                    setPesoHistorial(combinado);
+                    savePesoHistorial(combinado);
                 }
                 // Perfil: pisa el actual solo si confirmas (es un dato "de uno solo", no una lista).
                 if (data.profile) {
@@ -1854,6 +1899,81 @@ const App = () => {
         setToast(`✅ Perfil guardado — objetivo: ${Math.round(obj.objetivo)} kcal/día`);
     };
 
+    // ============================================================
+    //  PESO CORPORAL — registro con fecha, y sincronizado con el perfil
+    //  para que el objetivo calórico (TDEE) se mantenga siempre al día.
+    // ============================================================
+    const handleRegistrarPeso = () => {
+        const peso = Number(pesoHoyInput);
+        if (!peso || peso <= 0) { setToast('⚠️ Pon un peso válido'); return; }
+        const hoy = todayStr();
+        const sinHoy = pesoHistorial.filter(p => p.fecha !== hoy);
+        const nuevoHistorial = [...sinHoy, { fecha: hoy, peso }].sort((a, b) => a.fecha.localeCompare(b.fecha));
+        setPesoHistorial(nuevoHistorial);
+        savePesoHistorial(nuevoHistorial);
+        // Si hay perfil, actualizamos también el peso ahí para que el objetivo
+        // calórico (TDEE) recalcule con tu peso real más reciente.
+        if (profile) {
+            const perfilActualizado = { ...profile, peso };
+            setProfile(perfilActualizado);
+            saveProfile(perfilActualizado);
+        }
+        setPesoHoyInput('');
+        setToast('✅ Peso registrado');
+    };
+
+    const pesoHoyYaRegistrado = useMemo(() => pesoHistorial.some(p => p.fecha === todayStr()), [pesoHistorial]);
+    const ultimosPesos = useMemo(() => pesoHistorial.slice(-14), [pesoHistorial]);
+    const diferenciaPeso = useMemo(() => {
+        if (ultimosPesos.length < 2) return null;
+        return ultimosPesos[ultimosPesos.length - 1].peso - ultimosPesos[0].peso;
+    }, [ultimosPesos]);
+
+    // ============================================================
+    //  VISTAZO SEMANAL — últimos 7 días de calorías vs objetivo
+    // ============================================================
+    const historialSemanal = useMemo(() => {
+        const dias = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const key = fechaLocalStr(d);
+            const kcal = entries.filter(e => e.date === key).reduce((sum, e) => sum + e.calorias, 0);
+            dias.push({ fecha: key, kcal, label: d.toLocaleDateString('es-ES', { weekday: 'short' }).slice(0, 3) });
+        }
+        return dias;
+    }, [entries]);
+
+    // ============================================================
+    //  FAVORITOS — lo más registrado, para un toque en vez de dictar
+    // ============================================================
+    const favoritos = useMemo(() => {
+        const conteo = {};
+        entries.forEach(e => {
+            const key = e.alimento;
+            if (!conteo[key]) conteo[key] = { nombre: e.alimento, veces: 0, ultimo: e };
+            conteo[key].veces += 1;
+            if (e.id > conteo[key].ultimo.id) conteo[key].ultimo = e;
+        });
+        return Object.values(conteo)
+            .filter(f => f.veces >= 2) // solo lo repetido de verdad, no cosas que comiste una vez
+            .sort((a, b) => b.veces - a.veces)
+            .slice(0, 8);
+    }, [entries]);
+
+    const handleRegistrarFavorito = (fav) => {
+        if (isTodayClosed) { setToast('⚠️ El día de hoy está cerrado'); return; }
+        const now = new Date();
+        const nuevo = {
+            id: Date.now(), date: todayStr(),
+            hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            alimento: fav.ultimo.alimento, calorias: fav.ultimo.calorias, proteinas: fav.ultimo.proteinas,
+            carbohidratos: fav.ultimo.carbohidratos, grasas: fav.ultimo.grasas, gramos: fav.ultimo.gramos,
+        };
+        setEntries(prev => [...prev, nuevo]);
+        setToast(`✅ ${fav.nombre} registrado`);
+    };
+
     const startVoiceRecognition = () => {
         if (!isOnline) { setToast('⚠️ Sin conexión a internet'); return; }
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1868,8 +1988,61 @@ const App = () => {
             setIsListening(false);
         };
         rec.onend = () => setIsListening(false);
-        rec.onresult = (event) => analyzeLocal(event.results[0][0].transcript.trim(), null, 'voice');
+        rec.onresult = (event) => procesarTextoVoz(event.results[0][0].transcript.trim());
         try { rec.start(); } catch (e) { setToast('⚠️ Error al iniciar el micrófono'); }
+    };
+
+    // ============================================================
+    //  VOZ CON VARIOS ALIMENTOS — "un plátano y un café con leche"
+    //  Solo entra en juego si la frase completa NO coincide con nada
+    //  (así los platos combinados con "con" en el nombre no se rompen).
+    // ============================================================
+    const procesarTextoVoz = (texto) => {
+        const matchCompleto = buscarAlimento(texto);
+        if (matchCompleto) {
+            analyzeLocal(texto, null, 'voice');
+            return;
+        }
+        const partes = texto.split(/\s+y\s+/i).map(p => p.trim()).filter(Boolean);
+        if (partes.length >= 2) {
+            const detectados = partes.map(parte => {
+                const item = buscarAlimento(parte);
+                if (!item) return null;
+                const gramos = extraerGramos(parte, item).gramos;
+                return { texto: parte, item, gramos, incluir: true };
+            }).filter(Boolean);
+            if (detectados.length >= 2) {
+                setMultiPendientes(detectados);
+                setToast(`🗣️ Detecté ${detectados.length} alimentos, revísalos`);
+                return;
+            }
+        }
+        // No se pudo separar en varios con garantías: seguimos con el flujo normal.
+        analyzeLocal(texto, null, 'voice');
+    };
+
+    const actualizarPesoMulti = (idx, nuevoPeso) => {
+        setMultiPendientes(prev => prev.map((p, i) => i === idx ? { ...p, gramos: Number(nuevoPeso) || 0 } : p));
+    };
+    const toggleIncluirMulti = (idx) => {
+        setMultiPendientes(prev => prev.map((p, i) => i === idx ? { ...p, incluir: !p.incluir } : p));
+    };
+    const handleRegistrarMultiples = () => {
+        const incluidos = multiPendientes.filter(p => p.incluir && p.gramos > 0);
+        if (incluidos.length === 0) { setMultiPendientes(null); return; }
+        const now = new Date();
+        const nuevos = incluidos.map((p, i) => {
+            const macros = calcularMacrosPorPeso(p.item, p.gramos);
+            return {
+                id: Date.now() + i, date: todayStr(),
+                hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                alimento: macros.alimento, calorias: macros.calorias, proteinas: macros.proteinas,
+                carbohidratos: macros.carbohidratos, grasas: macros.grasas, gramos: macros.gramos,
+            };
+        });
+        setEntries(prev => [...prev, ...nuevos]);
+        setToast(`✅ ${nuevos.length} alimentos registrados`);
+        setMultiPendientes(null);
     };
 
     const handleCloseDay = () => {
@@ -1884,7 +2057,43 @@ const App = () => {
 
     return (
         <div className="space-y-4 animate-fade pb-8">
-            {toast && <div className="toast">{toast}</div>}
+            {toast && !pendingUndo && <div className="toast">{toast}</div>}
+            {pendingUndo && (
+                <div className="toast toast-undo">
+                    <span>{pendingUndo.message}</span>
+                    <button onClick={() => { clearTimeout(pendingUndo.timeoutId); pendingUndo.onUndo(); setPendingUndo(null); }} className="undo-btn">DESHACER</button>
+                </div>
+            )}
+
+            {/* MODAL VARIOS ALIMENTOS DETECTADOS EN LA MISMA FRASE */}
+            {multiPendientes && ReactDOM.createPortal(
+                <div className="confirm-modal">
+                    <div className="confirm-box" style={{maxWidth: '400px'}}>
+                        <h3 className="text-base font-black text-white mb-1">🗣️ Varios alimentos detectados</h3>
+                        <p className="text-[11px] text-slate-400 mb-4">Desmarca lo que no quieras registrar, o ajusta el peso.</p>
+                        <div className="space-y-2 mb-4 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+                            {multiPendientes.map((p, idx) => (
+                                <div key={idx} className={`p-3 rounded-xl border text-xs transition-opacity ${p.incluir ? 'bg-black/40 border-white/5' : 'bg-black/20 border-white/5 opacity-40'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <input type="checkbox" checked={p.incluir} onChange={() => toggleIncluirMulti(idx)} className="w-4 h-4 accent-indigo-500 shrink-0" />
+                                        <span className="font-bold text-white flex-1 truncate">{p.item.nombre}</span>
+                                        <input type="number" inputMode="numeric" value={p.gramos} onChange={e => actualizarPesoMulti(idx, e.target.value)}
+                                            className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white text-xs text-center focus:outline-none focus:border-indigo-500" />
+                                        <span className="text-slate-400">g</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-1 ml-6">{Math.round(p.item.cal * p.gramos / 100)} kcal · "{p.texto}"</p>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={handleRegistrarMultiples} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-sm transition-all active:scale-95">
+                                REGISTRAR {multiPendientes.filter(p => p.incluir).length}
+                            </button>
+                            <button onClick={() => setMultiPendientes(null)} className="py-3 px-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-sm transition-all active:scale-95">CANCELAR</button>
+                        </div>
+                    </div>
+                </div>, document.body
+            )}
 
             {/* MODAL APRENDER ALIMENTO */}
             {pendingCustomFood && ReactDOM.createPortal(
@@ -2043,6 +2252,22 @@ const App = () => {
                 <button onClick={handleOpenAdd} disabled={isTodayClosed} className="text-[12px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1.5 disabled:opacity-50"><i className="fa-solid fa-plus"></i> Añadir manual</button>
             </div>
 
+            {/* FAVORITOS — lo más frecuente, un toque y listo */}
+            {favoritos.length > 0 && (
+                <div>
+                    <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">⭐ Frecuentes</h3>
+                    <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-1 -mx-1 px-1">
+                        {favoritos.map((fav, idx) => (
+                            <button key={fav.nombre + idx} onClick={() => handleRegistrarFavorito(fav)} disabled={isTodayClosed}
+                                className="shrink-0 flex flex-col items-start gap-0.5 bg-white/5 hover:bg-indigo-500/10 border border-white/10 hover:border-indigo-500/30 rounded-2xl px-3.5 py-2.5 transition-all active:scale-95 disabled:opacity-40 text-left max-w-[160px]">
+                                <span className="text-xs font-bold text-white truncate w-full">{fav.nombre}</span>
+                                <span className="text-[10px] text-indigo-400 font-bold">{Math.round(fav.ultimo.calorias)} kcal · {fav.ultimo.gramos}g</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* HISTORIAL HOY */}
             <div className="bg-white/5 border border-white/10 rounded-3xl p-5">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Registrado hoy {isTodayClosed && ' (cerrado)'}</h3>
@@ -2178,11 +2403,21 @@ const App = () => {
             {/* MODAL PERFIL */}
             {profileModalOpen && ReactDOM.createPortal(
                 <div className="modal-overlay bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-base font-black text-white">👤 Perfil</h3>
+                    <div className="bg-[#0f111a] border border-white/10 p-6 rounded-t-[2.5rem] sm:rounded-[2rem] w-full max-w-sm shadow-2xl animate-fade max-h-[85vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-3 shrink-0">
+                            <h3 className="text-base font-black text-white">👤 Perfil y progreso</h3>
                             <button onClick={() => setProfileModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1"><i className="fa-solid fa-xmark text-lg"></i></button>
                         </div>
+                        <div className="flex gap-1.5 mb-4 shrink-0">
+                            {[{ id: 'datos', label: 'Datos' }, { id: 'peso', label: 'Peso' }, { id: 'semana', label: 'Semana' }].map(t => (
+                                <button key={t.id} onClick={() => setProfileTab(t.id)}
+                                    className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${profileTab === t.id ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-400'}`}>
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="overflow-y-auto custom-scrollbar pr-1">
+                        {profileTab === 'datos' && (
                         <form onSubmit={(e) => { e.preventDefault(); handleSaveProfile(); }} className="space-y-3">
                             <div>
                                 <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Sexo</label>
@@ -2242,6 +2477,105 @@ const App = () => {
                                 <button type="button" onClick={() => setProfileModalOpen(false)} className="py-3.5 px-4 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl font-bold text-sm transition-all active:scale-95">CANCELAR</button>
                             </div>
                         </form>
+                        )}
+
+                        {profileTab === 'peso' && (
+                        <div className="space-y-4">
+                            <div className="flex gap-2 items-end">
+                                <div className="flex-1">
+                                    <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">
+                                        {pesoHoyYaRegistrado ? 'Actualizar peso de hoy' : 'Peso de hoy (kg)'}
+                                    </label>
+                                    <input type="number" inputMode="decimal" value={pesoHoyInput} onChange={e => setPesoHoyInput(e.target.value)}
+                                        placeholder={profile ? String(profile.peso) : 'Ej: 78.5'}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white text-sm focus:outline-none focus:border-indigo-500" step="0.1" />
+                                </div>
+                                <button onClick={handleRegistrarPeso} className="py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-xs transition-all shadow-lg active:scale-95 shrink-0">GUARDAR</button>
+                            </div>
+                            <p className="text-[10px] text-slate-400 -mt-2">Al registrar tu peso, tu objetivo calórico se recalcula automáticamente con el peso nuevo.</p>
+
+                            {ultimosPesos.length === 0 && (
+                                <p className="text-slate-400 text-xs text-center py-6">Aún no has registrado ningún peso.</p>
+                            )}
+
+                            {ultimosPesos.length > 0 && (
+                                <>
+                                    <div className="flex justify-between items-center bg-white/5 border border-white/10 rounded-xl p-3">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest">Último registrado</p>
+                                            <p className="text-lg font-black text-white">{ultimosPesos[ultimosPesos.length - 1].peso} kg</p>
+                                        </div>
+                                        {diferenciaPeso !== null && (
+                                            <div className="text-right">
+                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Desde el primero de la lista</p>
+                                                <p className={`text-lg font-black ${diferenciaPeso < 0 ? 'text-emerald-400' : diferenciaPeso > 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                                                    {diferenciaPeso > 0 ? '+' : ''}{diferenciaPeso.toFixed(1)} kg
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Últimos registros</p>
+                                        <div className="flex items-end gap-1.5 h-24 bg-black/30 rounded-xl p-3">
+                                            {(() => {
+                                                const max = Math.max(...ultimosPesos.map(p => p.peso));
+                                                const min = Math.min(...ultimosPesos.map(p => p.peso));
+                                                const rango = Math.max(max - min, 1);
+                                                return ultimosPesos.map((p, i) => {
+                                                    const alturaPct = 15 + ((p.peso - min) / rango) * 85;
+                                                    return (
+                                                        <div key={p.fecha + i} className="flex-1 flex flex-col items-center justify-end h-full group relative" title={`${p.fecha}: ${p.peso}kg`}>
+                                                            <div className="w-full bg-indigo-500 rounded-t-sm" style={{ height: `${alturaPct}%`, minHeight: '3px' }}></div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
+                                        </div>
+                                        <div className="flex justify-between text-[9px] text-slate-500 mt-1 px-1">
+                                            <span>{ultimosPesos[0].fecha.slice(5)}</span>
+                                            <span>{ultimosPesos[ultimosPesos.length - 1].fecha.slice(5)}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        )}
+
+                        {profileTab === 'semana' && (
+                        <div className="space-y-4">
+                            <p className="text-[11px] text-slate-400">Calorías registradas en los últimos 7 días{calcularObjetivo ? ', comparadas con tu objetivo diario' : ''}.</p>
+                            <div className="flex items-end gap-2 h-40 bg-black/30 rounded-xl p-3 relative">
+                                {calcularObjetivo && calcularObjetivo.objetivo > 0 && (() => {
+                                    const maxVal = Math.max(calcularObjetivo.objetivo, ...historialSemanal.map(d => d.kcal)) * 1.05;
+                                    const lineaPct = 100 - (calcularObjetivo.objetivo / maxVal) * 100;
+                                    return (
+                                        <div className="absolute left-3 right-3 border-t border-dashed border-indigo-400/50" style={{ top: `${lineaPct}%` }}>
+                                            <span className="absolute -top-4 right-0 text-[8px] text-indigo-400 font-bold">objetivo</span>
+                                        </div>
+                                    );
+                                })()}
+                                {(() => {
+                                    const maxVal = Math.max(calcularObjetivo ? calcularObjetivo.objetivo : 0, ...historialSemanal.map(d => d.kcal), 1) * 1.05;
+                                    return historialSemanal.map((d, i) => {
+                                        const alturaPct = Math.min((d.kcal / maxVal) * 100, 100);
+                                        const sobreObjetivo = calcularObjetivo && d.kcal > calcularObjetivo.objetivo;
+                                        return (
+                                            <div key={d.fecha + i} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
+                                                <span className="text-[8px] text-slate-400 font-bold">{d.kcal > 0 ? Math.round(d.kcal) : ''}</span>
+                                                <div className={`w-full rounded-t-md transition-all ${sobreObjetivo ? 'bg-rose-500' : d.kcal > 0 ? 'bg-emerald-500' : 'bg-white/5'}`} style={{ height: `${Math.max(alturaPct, 2)}%` }}></div>
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase">{d.label}</span>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                            {!calcularObjetivo && (
+                                <p className="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">⚠️ Configura tu perfil en la pestaña "Datos" para ver tu objetivo comparado.</p>
+                            )}
+                        </div>
+                        )}
+                        </div>
                     </div>
                 </div>, document.body
             )}
